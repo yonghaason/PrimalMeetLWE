@@ -11,7 +11,9 @@ my_list sparse_secret_list(
 {
   auto m = Mtrans[0].size();
   my_list R;
-  if (n == 0) return R;
+  if (n == 0 | n < w) {
+    return R;
+  }
   else if (w == 0) {
     R.push_back(make_pair(vector<int64_t>(n), vector<int64_t>(m)));
     return R;
@@ -22,7 +24,7 @@ my_list sparse_secret_list(
     R.push_back(make_pair(vector<int64_t>{-1}, subvec(zerovec, Mtrans[n-1])));
     return R;
   }
-  else if (n >= w) {
+  else {
     auto R1 = sparse_secret_list(Mtrans, n-1, w-1);
     auto R2 = sparse_secret_list(Mtrans, n-1, w);
 
@@ -175,10 +177,10 @@ my_list build_list(vector<vector<int64_t>>& M,
   return L;
 };
 
-vector<vector<int64_t>> near_collision_naive(
+set<pair<vector<int64_t>, vector<int64_t>>> near_collision_naive(
   my_list& L, double stddev, uint64_t q, uint32_t h)
 {
-  vector<vector<int64_t>> sol;
+  set<pair<vector<int64_t>, vector<int64_t>>> sol;
   auto N = L.size();
   auto n = L[0].first.size();
   for (size_t i = 0; i < N; i++) {
@@ -193,60 +195,82 @@ vector<vector<int64_t>> near_collision_naive(
       modq(Ms_, q);
 
       if (inf_norm(Ms_) < 6*stddev)
-        sol.push_back(s_);
+        sol.insert(make_pair(L[i].first, L[j].first));
     }
   }
   return sol;
 };
 
-vector<vector<int64_t>> near_collision_lsh(
+set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
   my_list& L, double stddev, uint64_t q, uint32_t h, 
-  double& lsh_length, vector<uint64_t>& domain) 
+  double lsh_length, vector<double>& domain) 
 {
-  vector<vector<int64_t>> sol;
-  
-  /**
-   * 0. box_num = ceil((double) q / box_len), box_len_real = (double) q / box_num;
-   * 1. Take a random center in box_len_real
-   * 2. Insert each point in corresponding box
-   * - How to implement?
-   * map<vector<uint64_t>, list>
-   *       Box Address  (s, [Ms]_q)
-   * 3. For each box, check collision.
-   */
-
-  size_t box_num = ceil((double) q / lsh_length);
-  lsh_length = (double) q / box_num;
-
-  map<vector<uint32_t>, my_list> hash_table;
+  set<pair<vector<int64_t>, vector<int64_t>>> sol;
 
   random_device rd;
   mt19937 gen(rd());
-  uniform_real_distribution<double> lsh_random_center(0, lsh_length);
 
-  for (auto& p: L) {
-    auto Mv = p.second;
-    std::vector<uint32_t> address;
-    for (size_t i = 0; i < Mv.size(); i++) {
-      
-    }
+  auto n = L[0].first.size();
+  auto m = L[0].second.size();
+
+  auto iteration = 1; // TODO: Should be 1/p_good .. like this
+
+  vector<size_t> box_num(m);
+  vector<size_t> lsh_length_real(m);
+
+  for (size_t i = 0; i < m; i++) {
+    if (domain[i] < lsh_length) box_num[i] = 1;
+    else box_num[i] = ceil(domain[i] / lsh_length);
+    lsh_length_real[i] = domain[i] / box_num[i];
   }
+
+  for (size_t iter = 0; iter < iteration; iter++) {    
+    // Pick torus-LSH by starting points
+    vector<double> lsh_starts(m);
+    for (size_t i = 0; i < m; i++) {
+      uniform_real_distribution<double> lsh_random_starts(0, lsh_length_real[i]);
+      lsh_starts[i] = lsh_random_starts(gen);
+    }
+
+    // Fill LSH table
+    map<vector<uint32_t>, my_list> hash_table;
+    for (auto& p: L) {
+      auto Mv = p.second;
+      std::vector<uint32_t> address(m);
+      my_list bin;
+      for (size_t i = 0; i < m; i++) {
+        int64_t a = floor((Mv[i] - lsh_starts[i]) / lsh_length_real[i]);
+        address[i] = a % box_num[i];
+      }
+      if (hash_table.count(address) > 0) {
+        hash_table[address].push_back(p);
+      }
+      else {
+        hash_table[address] = my_list{p};
+      }
+    }
+      
+    for (auto &iterator: hash_table) {
+      auto bin = iterator.second;
+      auto N = bin.size();
+      auto n = bin[0].first.size();
+      for (size_t i = 0; i < N; i++) {
+        for (size_t j = i+1; j < N; j++) {
+          auto s_ = subvec(bin[i].first, bin[j].first);
+          if (hamming_weight(s_) != h)
+            continue;
+          if (s_[n-1] == 1)
+            continue;
+          
+          auto Ms_ = subvec(bin[i].second, bin[j].second);
+          modq(Ms_, q);
+
+          if (inf_norm(Ms_) < 6*stddev)
+            sol.insert(make_pair(bin[i].first, bin[j].first));
+        }
+      }
+    }
+}
   
-    
-  for (size_t i = 0; i < N; i++) {
-    for (size_t j = i+1; j < N; j++) {
-      auto s_ = subvec(L[i].first, L[j].first);
-      if (hamming_weight(s_) != h)
-        continue;
-      if (s_[n-1] == 1)
-        continue;
-      
-      auto Ms_ = subvec(L[i].second, L[j].second);
-      modq(Ms_, q);
-
-      if (inf_norm(Ms_) < 6*stddev)
-        sol.push_back(s_);
-    }
-  }
   return sol;
 };

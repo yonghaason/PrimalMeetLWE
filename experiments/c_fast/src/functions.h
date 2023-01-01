@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utils.h"
+#include <set>
 
 using namespace std;
 
@@ -22,8 +23,8 @@ void gen_instance(
 my_list build_list(
   vector<vector<int64_t>>& M, uint32_t w, uint32_t r, double l, uint64_t q);
 
-vector<vector<int64_t>> near_collision_naive(
+set<pair<vector<int64_t>, vector<int64_t>>> near_collision_naive(
   my_list& L, double stddev, uint64_t q, uint32_t h);
-vector<vector<int64_t>> near_collision_lsh(
+set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
   my_list& L, double stddev, uint64_t q, uint32_t h, 
-  double& lsh_length, vector<uint64_t>& domain);
+  double lsh_length, vector<double>& domain);

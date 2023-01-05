@@ -9,16 +9,31 @@
 
 using namespace std;
 
-using my_list = vector<pair<vector<int64_t>, vector<int64_t>>>;
+using secret = vector<int64_t>;
+using domain = vector<double>;
+using matrix = vector<vector<double>>;
 
-void modq(vector<int64_t>& v, uint64_t q, bool balanced = true);
-uint64_t inf_norm(vector<int64_t>& v, size_t start = 0);
-uint32_t hamming_weight(vector<int64_t>& v);
-
-uint64_t binom(uint32_t n, uint32_t k);
 uint64_t ambiguity(uint32_t n, uint32_t h, uint32_t w);
 
-vector<int64_t> addvec(vector<int64_t>& a, vector<int64_t>& b);
-vector<int64_t> subvec(vector<int64_t>& a, vector<int64_t>& b);
+// Prob[x + e in [-b, b]], 
+// where x <-[-b, b] and e <- gaussian of stddev, or unif[-e, e]
+double prob_admissible_gaussian(double stddev, double b);
+double prob_admissible_uniform(double e, double b);
 
-void print_list(my_list L);
+bool weight_ternary_check(secret& s, uint32_t weight);
+
+// Basic Maths
+uint64_t binom(uint32_t n, uint32_t k);
+vector<double> addvec(vector<double>& a, vector<double>& b);
+vector<double> subvec(vector<double>& a, vector<double>& b);
+secret add(secret& a, secret& b);
+secret sub(secret& a, secret& b);
+void fmodvec(vector<double>& v, domain& GSnorm, bool balanced = true);
+double inf_norm(domain& v, size_t start = 0);
+matrix transpose(matrix& M);
+vector<double> matmul(matrix& Mtrans, secret& s);
+uint32_t hamming_weight(secret& v);
+
+void print(secret& v);
+void print(vector<double>& v);
+// void print_list(my_list L);

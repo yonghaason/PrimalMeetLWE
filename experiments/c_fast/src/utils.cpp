@@ -3,18 +3,15 @@
 
 double prob_admissible_gaussian(double stddev, double b)
 {
-  // This formula is incorrect if stddev > b!
-  // However we never expect such case in our algorithm ..
-  assert(stddev <= b);
-  auto x = 4*b/(sqrt(2) * stddev);
-  return 2*(erf(x) + (exp(-pow(x, 2)) - 1)/(x * sqrt(M_PI))) - 1.0;
+  auto x = b/(sqrt(2)*stddev);
+  auto p = erf(x) + (exp(-pow(x, 2)) - 1)/(x * sqrt(M_PI));
+  return p;
 }
 
 double prob_admissible_uniform(double e, double b)
 { 
-  if (e <= b) return 1.0 - e/(4*b);
-  else if (e <= 2*b) return 0.25 + b/(2*e);
-  else return (3*b)/(4*e);
+  if (e <= b) return 1.0 - e/(2*b);
+  else return b/(2*e);
 }
 
 bool weight_ternary_check(secret& s, uint32_t weight)

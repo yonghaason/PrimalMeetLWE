@@ -163,7 +163,7 @@ void ConstraintTest::gen_noisy_instance(
   }
 };
 
-void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length)
+void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound)
 {
   auto R = ambiguity(n, h, guess_weight);
   proj_dim = 1;
@@ -175,13 +175,13 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length
     if (proj_dim == m) break;
     
     double cur_ratio = 1;
-    double cur_axis_length = (2*box_length < GSnorm[m-proj_dim]) ?
-                              2*box_length : GSnorm[m-proj_dim];
+    double cur_axis_length = (2*constraint_bound < GSnorm[m-proj_dim]) ?
+                              2*constraint_bound : GSnorm[m-proj_dim];
     double cur_p_adm = unif? 
-                      prob_admissible_uniform(e, cur_axis_length/2): 
-                      prob_admissible_gaussian(e, cur_axis_length/2);
-    if (2*box_length < GSnorm[m-proj_dim]) {
-      cur_ratio = GSnorm[m-proj_dim] / (2*box_length);
+                      prob_admissible_uniform(e, cur_axis_length): 
+                      prob_admissible_gaussian(e, cur_axis_length);
+    if (2*constraint_bound < GSnorm[m-proj_dim]) {
+      cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
     }
 
     auto inv = 1.0 / (p_adm * cur_p_adm / cur_ratio);
@@ -207,7 +207,7 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length
 }
 
 vector<pair<secret, vector<double>>> ConstraintTest::build_list(
-  matrix& M, uint32_t guess_weight, double box_length)
+  matrix& M, uint32_t guess_weight, double constraint_bound)
 {
   // S = {(v, Mv): HW(v) = w}
   matrix Mtrans = transpose(M);
@@ -219,7 +219,7 @@ vector<pair<secret, vector<double>>> ConstraintTest::build_list(
     auto Mv = p.second;
     fmodvec(Mv, GSnorm);
 
-    if (inf_norm(Mv, m-proj_dim) <= box_length)
+    if (inf_norm(Mv, m-proj_dim) <= constraint_bound)
       L.push_back(make_pair(v, Mv));
   }
   return L;
@@ -227,7 +227,7 @@ vector<pair<secret, vector<double>>> ConstraintTest::build_list(
 
 set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
   matrix& M, secret& s, vector<double>& e, 
-  vector<secret>& partial_list, uint32_t guess_weight, double box_length) 
+  vector<secret>& partial_list, uint32_t guess_weight, double constraint_bound) 
 {
   matrix Mtrans = transpose(M);
   set<pair<secret, secret>> sol;
@@ -238,7 +238,7 @@ set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
       auto Ms2 = subvec(Ms1, e);
       fmodvec(Ms1, GSnorm);
       fmodvec(Ms2, GSnorm); // 중요: 이걸 하냐 마냐가 critical detail .. ? 
-      if ((inf_norm(Ms1, m-proj_dim) <= box_length) && (inf_norm(Ms2, m-proj_dim) <= box_length)) {
+      if ((inf_norm(Ms1, m-proj_dim) <= constraint_bound) && (inf_norm(Ms2, m-proj_dim) <= constraint_bound)) {
         sol.insert(make_pair(s1, s2));
       }
     }
@@ -447,8 +447,8 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
   
   for (size_t i = 0; i < lsh_dim; i++) {
     if (box_num[i] > 1) {
-      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]/2);
-      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]/2);
+      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]);
+      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]);
     }
   }
 

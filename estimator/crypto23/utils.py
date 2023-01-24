@@ -55,13 +55,13 @@ def prettyprint(dic, filename = False):
     print('* Lattice:', dic['lat'])
     print('* Guess: {', end='')
     for keyy in dic['guess']:
-        if keyy != 'lsh_info':
+        if keyy != 'lsh_stats':
             print('\'', keyy, '\': ', dic['guess'][keyy], sep = '', end=', ')
     print('}')
     print('---- Further details on guess')
-    if 'lsh_info' in dic['guess']:
-        for i in range(len(dic['guess']['lsh_info'])):
-            print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_info'][i])
+    if 'lsh_stats' in dic['guess']:
+        for i in range(len(dic['guess']['lsh_stats'])):
+            print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_stats'][i])
 
     if filename is not False:
         f.close()
@@ -234,6 +234,10 @@ def prob_np(GSnorm, stddev):
         bnd = q / (2 * stddev * sqrt(2))
         pr_np *= erf(bnd)
     return pr_np
+
+def babai_cost(d):
+    return d**2
+    # return d
 
 ##################################################
 #            Maths & Combinatorics

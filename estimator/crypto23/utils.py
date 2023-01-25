@@ -53,15 +53,18 @@ def prettyprint(dic, filename = False):
 
     print('* Final Cost:', dic['cost'])
     print('* Lattice:', dic['lat'])
-    print('* Guess: {', end='')
+    print('* Guess: ', end='\n')
     for keyy in dic['guess']:
         if keyy != 'lsh_stats':
-            print('\'', keyy, '\': ', dic['guess'][keyy], sep = '', end=', ')
-    print('}')
+            print('   - \'', keyy, '\': ', dic['guess'][keyy], sep = '', end='\n')
+    # print('}')
     print('---- Further details on guess')
     if 'lsh_stats' in dic['guess']:
         for i in range(len(dic['guess']['lsh_stats'])):
             print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_stats'][i])
+    if 'lsh_info' in dic['guess']:
+        for i in range(len(dic['guess']['lsh_info'])):
+            print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_info'][i])
 
     if filename is not False:
         f.close()
@@ -317,8 +320,7 @@ def prob_admissible_gaussian(b, stddev):
     # Prob[x + y in [0, b]], where x <-[0, b] and y <- Gaussian(stddev)
     x = b/(sqrt(2) * stddev)
     try:
-        prob = erf(x) + (exp(-x**2) - 1)/(x * sqrt(pi))
-        return prob
+        return erf(x) + (exp(-x**2) - 1)/(x * sqrt(pi))
     except OverflowError:
         return 1
 
@@ -328,3 +330,15 @@ def prob_admissible_uniform(b, e):
         return 1 - e/(2*b)
     else:
         return b/(2*e)
+
+
+def p_admissible(GSnorm, coords, is_error_unif, error_param):
+    p_adm = 1
+    if is_error_unif:
+        for i in coords:
+            p_adm *= prob_admissible_uniform(GSnorm[i], error_param)
+    else:
+        for i in coords:
+            p_adm *= prob_admissible_gaussian(GSnorm[i], error_param)
+
+    return p_adm

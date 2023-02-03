@@ -52,19 +52,19 @@ def prettyprint(dic, filename = False):
         sys.stdout = f
 
     print('* Final Cost:', dic['cost'])
-    print('* Lattice:', dic['lat'])
-    print('* Guess: ', end='\n')
-    for keyy in dic['guess']:
-        if keyy != 'lsh_stats':
-            print('   - \'', keyy, '\': ', dic['guess'][keyy], sep = '', end='\n')
-    # print('}')
+    for keyy in dic:
+        if keyy != 'cost' and keyy != 'guess_details':
+            print('   - \'', keyy, '\': ', dic[keyy], sep = '', end='\n')
+    
+    guess = dic['guess_details'][-1]
+    print('Guess details:')
+    for keyy in guess:
+        if keyy not in ['lsh_stats', 'cost'] and len(guess[keyy]) != 0:
+            print('   - \'', keyy, '\': ', guess[keyy], sep = '', end='\n')
     print('---- Further details on guess')
-    if 'lsh_stats' in dic['guess']:
-        for i in range(len(dic['guess']['lsh_stats'])):
-            print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_stats'][i])
-    if 'lsh_info' in dic['guess']:
-        for i in range(len(dic['guess']['lsh_info'])):
-            print('* lsh info of Lv', i+1, '->', i, ':', dic['guess']['lsh_info'][i])
+    if 'lsh_stats' in guess:
+        for i in range(len(guess['lsh_stats'])):
+            print('* lsh info of Lv', i+1, '->', i, ':', guess['lsh_stats'][i])
 
     if filename is not False:
         f.close()
@@ -247,6 +247,8 @@ def babai_cost(d):
 ##################################################
 
 def comb(n, c):
+    if n <= 0:
+        return 0
     r = min(c, n-c)
     numer = reduce(op.mul, range(n, n-r, -1), 1)
     denom = reduce(op.mul, range(1, r+1), 1)

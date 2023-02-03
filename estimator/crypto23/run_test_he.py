@@ -1,4 +1,4 @@
-from estimate import *
+from estimator import *
 import sys
 import os.path
             

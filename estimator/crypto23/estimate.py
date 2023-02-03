@@ -76,12 +76,12 @@ def primal_may_inner(n, q, stddev, is_sec_bal, w, m, lv, filename=False):
         f = open(filename, 'a')
         sys.stdout = f
 
-    nu = stddev / float(sqrt((w) / n))
+    nu = stddev / float(sqrt(w / n))
     if is_sec_bal:
-        nu = stddev / float(sqrt(2*w) / n)
+        nu = stddev / float(sqrt(2*w / n))
     func = partial(cost_zeta, n=n, q=q, stddev=stddev, 
                     is_sec_bal=is_sec_bal, w=w, m=m, nu=nu, lv=lv)
-    best = my_binary_search(0, n, func, cur_depth = 0, max_depth = 4)
+    best = my_binary_search(0, n, func, cur_depth = 0, max_depth = 6)
     
     print("----------------------")
 
@@ -106,7 +106,7 @@ def cost_zeta(zeta, n, q, stddev, is_sec_bal, w, m, nu, lv, filename = False):
     # Find the best submatrix size d < m_
     func = partial(cost_d, zeta=zeta, n=n, q=q, stddev=stddev, 
                     is_sec_bal=is_sec_bal, w=w, nu=nu, lv=lv, probs_hw = probs_hw)
-    best = my_binary_search(d1 + 1, m_, func, cur_depth = 0, max_depth = 2)
+    best = my_binary_search(d1 + 1, m_, func, cur_depth = 0, max_depth = 4)
     
     line = ' WIP: zeta = %d : %f' % (zeta, best['cost'])
     print(line)
@@ -131,7 +131,7 @@ def cost_d(d, zeta, n, q, stddev, is_sec_bal, w, nu, lv, probs_hw = []):
     print('     zeta = %d / d = %d :' % (zeta, d), best['cost'])
     return best
 
-def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, probs_hw = []):
+def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, probs_hw = [], HG=False):
 
     log_lat = log_BKZ_cost(d, beta)
     GSnorm = GSA(d, q, d,  n + 1 - zeta, beta, nu)
@@ -155,71 +155,80 @@ def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, probs_hw = [])
 
     # rough bound assuming |S|^0.25 < lat['cost']
     w_g_bound = ceil(4*lat['cost']/(1 + Log2(zeta)))
-    if is_sec_bal:
-        w_g_bound = (w_g_bound+1)//2
-
-    w_g_min = max((w - (n-zeta)), 0)
+    w_g_min = max(w - (n-zeta), 0)
     w_g_max = min(w_g_bound, zeta, w)
+
+    if is_sec_bal:
+        w_g_min = max((w - (n-zeta)//2), 0)
+        w_g_max = min(w_g_bound//2, zeta//2, w)
+
+    if w_g_min > w_g_max:
+        return {'cost': np.inf}
+
+    cost = {'lat': lat.copy()}
+
+    guesses = []
+    guess_cost = 0.0
+    pr_hw = 0.0
+    w_g_range = range(((w_g_min+1)//2)*2, (w_g_max//2)*2, 2) if (lv >= 1) \
+                else range(w_g_min, w_g_max)
     
-    lat['w_g_range'] = [(w_g_min//2)*2, ((w_g_max+1)//2)*2]
+    for w_g in w_g_range:
+        if w_g == 0:
+            continue
 
-    # Find the best guessing weight w_g
-    func = partial(cost_guess, lat=lat, GSnorm=GSnorm, zeta=zeta, n=n, d=d, stddev=stddev, 
-                    is_sec_bal=is_sec_bal, w=w, lv=lv, probs_hw = probs_hw)
-    best = my_binary_search(w_g_min//2, w_g_max//2, func, cur_depth = 0, max_depth = 4)
-    
-    return best
-
-def cost_guess(w_g_half, lat, GSnorm, zeta, n, d, stddev, is_sec_bal, w, lv, probs_hw = []):
-    # make w_g even
-    w_g = 2*w_g_half
-
-    log_lat = lat['cost']
-    log_pr_np = lat['log_pr_np']
-
-    current = {'lat': lat.copy()}
-    current['guess'] = {}
-    current['guess']['w_g'] = w_g
-
-    log_pr_hw = None
-    if w_g >= len(probs_hw):
-        log_pr_hw = Log2(prob_hw(n, zeta, w, w_g, is_sec_bal))
-    else:
-        log_pr_hw = Log2(probs_hw[w_g])
-
-    if w_g == 0:
-        current['guess']['log_pr_w_g'] = log_pr_hw
-        current['cost'] = round(log_lat - log_pr_hw - log_pr_np, 2)
-    else:
-        guess = None
-        babai_cost = 2*Log2(d)
-        current['guess']['log_pr_w_g'] = log_pr_hw
+        cur_guess = None
         if lv == 0: # Exhaustive Search
-            guess = {'cost': round(Log2(num_ternary_secret(zeta, w_g, is_sec_bal)) + babai_cost, 2)}
-        else: # MitM or Meet-lwe
-            current_guess = \
-             {
-             'log_S_i': [], 
-             'w_i': [],
-             'log_R_i': [], 
-             'log_L_i': [1],
-             'log_cost_babai': [],
-             'log_cost_lsh': [], 
-             'proj_dim': [d], 
-             'log_p_rep': [], 
-             'log_vol_ratio': [], 
-             'cons_bound': [], 
-             'lsh_stats': []}
-            guess = meet_LWE_cost(1, GSnorm, is_sec_bal, zeta, 
-                proj_dim = len(GSnorm), w = w_g, is_error_unif = False, 
+            cur_guess = {'cost': round(Log2(num_ternary_secret(zeta, w_g, is_sec_bal) * babai_cost(len(GSnorm))), 2)}
+        elif lv == 1 and HG == True: # Classic Howgrave-Graham
+            cur_guess = HG_cost_simple(GSnorm, is_sec_bal, zeta, w_g, stddev)
+        else: # Our (Generalized) Meet-LWE
+            initial_stat = \
+            {'log_S_i': [], 'w_i': [w_g],'log_R_i': [], 'log_L_i': [1], 
+            'log_cost_babai': [], 'log_cost_lsh': [], 'proj_dim': [d], 
+            'log_p_rep': [], 'log_vol_ratio': [], 'cons_bound': [], 'lsh_stats': []}
+            cur_guess = meet_LWE_cost(1, GSnorm, is_sec_bal, zeta, 
+                proj_dim = len(GSnorm), w = w_g, is_error_unif=False, 
                 error_param = stddev, lsh_length = 6*stddev,
-                last_lv=lv, current_guess = copy.deepcopy(current_guess), abort_bound=log_lat)
+                last_lv=lv, current_guess = copy.deepcopy(initial_stat), abort_bound=log_lat)
+        
+        if cur_guess['cost'] is np.inf or cur_guess['cost'] > log_lat:
+            break
+        else:
+            if w_g >= len(probs_hw):
+                pr_hw += prob_hw(n, zeta, w, w_g, is_sec_bal)
+            else:
+                pr_hw += probs_hw[w_g]
+            guesses.append(cur_guess)
+            guess_cost += 2**cur_guess['cost']
+            cost['w_guess'] = w_g
+            
+    cost['guess_cost'] = Log2(guess_cost)
+    cost['log_p_hw'] = Log2(pr_hw)    
+    cost['cost'] = round(max(log_lat, Log2(guess_cost)) - Log2(pr_hw) - log_pr_np, 2)
+    cost['guess_details'] = guesses
 
-        current['cost'] = round(max(log_lat, guess['cost']) - log_pr_hw - log_pr_np, 2)
-        for key in guess:
-            current['guess'][key] = guess[key]
+    return cost
 
-    return current
+def HG_cost_simple(GSnorm, is_sec_bal, zeta, w, error_param):
+    # Assume no LSH overhead, i.e., List construction dominates    
+    guess_HG = {}
+    d = len(GSnorm)
+    w_split = w//2
+    R = ambiguity(zeta, w, w_split, is_sec_bal)
+    p_adm = p_admissible(GSnorm, range(d), False, error_param)
+    S1 = num_ternary_secret(zeta, w_split, is_sec_bal)
+    L1 = S1 / sqrt(R*p_adm)
+    cost = L1 * babai_cost(d)
+
+    guess_HG['logS'] = Log2(S1)
+    guess_HG['w_split'] = w_split
+    guess_HG['logL'] = Log2(L1)
+    guess_HG['logR'] = Log2(R)
+    guess_HG['log_p_adm'] = Log2(p_adm)
+    guess_HG['cost'] = Log2(cost)
+
+    return guess_HG
     
 def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
     proj_dim, w, is_error_unif, error_param, 
@@ -227,15 +236,12 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
     
     d = len(GSnorm)
     cur_best = {'cost': np.inf}
-    
+
     if lv == last_lv:
         p_adm = p_admissible(GSnorm, range(d-proj_dim, d), is_error_unif, error_param)
-        if p_adm == 0:
-            return cur_best
-
-        # p_lsh_adm = p_admissible(GSnorm, range(current_guess['proj_dim'][-2], d-proj_dim), is_error_unif, error_param)
         
         for w_split in range(w//2, w + 1):
+            running_stat = copy.deepcopy(current_guess)
             R = ambiguity(zeta, w, w_split, is_sec_bal)
             if R * p_adm < 1:
                 continue
@@ -248,54 +254,56 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
             if lv == 1:
                 cost_lsh, stat_lsh = lsh_cost_bottom(L, error_param, lsh_length, GSnorm,
                                         lsh_last_idx = d - 1,
-                                        unif = is_error_unif)
-                p_lsh_adm = p_admissible(GSnorm, range(stat_lsh['lsh_coords'][0], stat_lsh['lsh_coords'][1]+1), is_error_unif, error_param)
-                current_guess['proj_dim'].append(d - stat_lsh['lsh_coords'][0])
-                stat_lsh['log_p_lsh_adm'] = (2**(lv-1))*Log2(p_lsh_adm)
+                                        is_error_unif = is_error_unif)
+                running_stat['proj_dim'].append(d - stat_lsh['lsh_coords'][0])
+                S0 = num_ternary_secret(zeta, w, is_sec_bal)
+                vol_ratio0 = 1
+                for i in range(stat_lsh['lsh_coords'][0], stat_lsh['lsh_coords'][1]+1):
+                    vol_ratio0 *= GSnorm[i] / lsh_length
+                running_stat['log_L_i'] = [max(0, Log2(S0/vol_ratio0))]
                 
             else:
                 cost_lsh, stat_lsh = lsh_cost(L, error_param, lsh_length, GSnorm,
                                 lsh_start_idx = d-proj_dim, 
-                                unif=is_error_unif)
+                                is_error_unif = is_error_unif)
             
-            log_cost_babai = current_guess['log_L_i'][-1] + Log2(babai_cost(current_guess['proj_dim'][-2]))
-            cost_top_babai = L * babai_cost(current_guess['proj_dim'][-1])
+            log_cost_babai = running_stat['log_L_i'][-1] + Log2(babai_cost(running_stat['proj_dim'][-2]))
+            cost_top_babai = L * babai_cost(running_stat['proj_dim'][-1])
             
-            # stat_lsh['log_p_lsh_adm'] = (2**(lv-1))*Log2(p_lsh_adm)
-            
-            total_cost = cost_lsh + cost_top_babai
-            for log_cost_lsh in current_guess['log_cost_lsh']:
-                total_cost += 2**log_cost_lsh
-            for log_cost_babai in current_guess['log_cost_babai']:
-                total_cost += 2**log_cost_babai
+            total_cost = cost_lsh + cost_top_babai + 2**log_cost_babai
+            for log_lsh in running_stat['log_cost_lsh']:
+                total_cost += 2**log_lsh
+            for log_babai in running_stat['log_cost_babai']:
+                total_cost += 2**log_babai
             log_total_cost = Log2(total_cost)
 
-            if log_total_cost < cur_best['cost']:
-                cur_best = copy.deepcopy(current_guess)
-                cur_best['cost'] = log_total_cost
-                cur_best['log_cost_lsh'].append(Log2(cost_lsh))
-                cur_best['log_cost_babai'].append(round(log_cost_babai, 2))
-                cur_best['log_cost_babai'].append(Log2(cost_top_babai))
-                cur_best['log_S_i'].append(Log2(S))
-                cur_best['log_L_i'].append(Log2(L))
-                cur_best['log_R_i'].append(Log2(R))
-                cur_best['w_i'].append(w_split)
-                cur_best['log_p_adm'] = (Log2(p_adm))
-                cur_best['lsh_stats'].append(stat_lsh)
+            running_stat['cost'] = log_total_cost
+            running_stat['log_cost_lsh'].append(Log2(cost_lsh))
+            running_stat['log_cost_babai'].append(round(log_cost_babai, 2))
+            running_stat['log_cost_babai'].append(Log2(cost_top_babai))
+            running_stat['log_S_i'].append(Log2(S))
+            running_stat['log_L_i'].append(Log2(L))
+            running_stat['log_R_i'].append(Log2(R))
+            running_stat['w_i'].append(w_split)
+            running_stat['log_p_adm'] = [Log2(p_adm)]
+            running_stat['lsh_stats'].append(stat_lsh)
 
-        return cur_best
+            if running_stat['cost'] < cur_best['cost']:
+                cur_best = copy.deepcopy(running_stat)
         
     else:
         constraint_bound = error_param # One can further fine-tune this ...
         w_start = w//2
         if w_start % 2 == 1: w_start += 1
+
         for w_split in range(w_start, w + 1, 2):
             running_stat = copy.deepcopy(current_guess)
             R = ambiguity(zeta, w, w_split, is_sec_bal)
             next_proj_dim, p_rep, vol_ratio = \
                 constraint_area(R, error_param, constraint_bound, GSnorm,
-                                unif=is_error_unif, 
+                                is_error_unif = is_error_unif, 
                                 proj_last = proj_dim)
+
             if next_proj_dim == 0:
                 continue
             S = num_ternary_secret(zeta, w_split, is_sec_bal)
@@ -307,19 +315,22 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
             if lv == 1:
                 cost_lsh, stat_lsh = lsh_cost_bottom(L, error_param, lsh_length, GSnorm,
                                         lsh_last_idx = d - next_proj_dim,
-                                        unif = is_error_unif)
-                p_lsh_adm = p_admissible(GSnorm, range(stat_lsh['lsh_coords'][0], stat_lsh['lsh_coords'][1]+1), is_error_unif, error_param)
+                                        is_error_unif = is_error_unif)
                 running_stat['proj_dim'].append(d - stat_lsh['lsh_coords'][0])
+                S0 = num_ternary_secret(zeta, w, is_sec_bal)
+                vol_ratio0 = 1
+                for i in range(stat_lsh['lsh_coords'][0], stat_lsh['lsh_coords'][1]+1):
+                    vol_ratio0 *= GSnorm[i] / lsh_length
+                running_stat['log_L_i'] = [max(0, Log2(S0/vol_ratio0))]
                 
             else:
                 cost_lsh, stat_lsh = lsh_cost(L, error_param, lsh_length, GSnorm,
                                 lsh_start_idx = d - proj_dim,
                                 constraint_cube_length = 2*constraint_bound,
-                                constraint_dim_idx = d - next_proj_dim, unif=is_error_unif)
-                p_lsh_adm = p_admissible(GSnorm, range(d-proj_dim, d-next_proj_dim+1), is_error_unif, error_param)
+                                constraint_dim_idx = d - next_proj_dim, 
+                                is_error_unif = is_error_unif)
             
             log_cost_babai = running_stat['log_L_i'][-1] + Log2(babai_cost(running_stat['proj_dim'][-2]))
-            stat_lsh['log_p_lsh_adm'] = (2**(lv-1))*Log2(p_lsh_adm)
             
             if Log2(cost_lsh) > abort_bound:
                 continue
@@ -337,16 +348,19 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
             running_stat['cons_bound'].append(error_param)
             running_stat['lsh_stats'].append(stat_lsh)
 
-            comp_best = meet_LWE_cost(lv+1, GSnorm, is_sec_bal, zeta,
+            comp = meet_LWE_cost(lv+1, GSnorm, is_sec_bal, zeta,
             next_proj_dim, w_split, True, constraint_bound, 2*constraint_bound, 
             last_lv, copy.deepcopy(running_stat), abort_bound)
 
-            if comp_best['cost'] < cur_best['cost']:
-                cur_best = copy.deepcopy(comp_best)            
-        
-        return cur_best
+            if comp['cost'] < cur_best['cost']:
+                cur_best = copy.deepcopy(comp)
 
-def constraint_area(R, error_param, constraint_bound, GSnorm, unif=True, proj_last = None):
+    if cur_best['cost'] == np.inf:
+        cur_best['cost'] = Log2(num_ternary_secret(zeta, w, is_sec_bal) * babai_cost(proj_dim))
+
+    return cur_best
+
+def constraint_area(R, error_param, constraint_bound, GSnorm, is_error_unif, proj_last = None):
     '''
     Consider a secret s satisfying Bs = e where e is determined by 'error_param',
     and assume that there are R many ternary pairs (s1, s2) such that s = s1 - s2.
@@ -371,7 +385,7 @@ def constraint_area(R, error_param, constraint_bound, GSnorm, unif=True, proj_la
         if 2*constraint_bound < GSnorm[-proj_dim]:
             cur_axis_length = 2*constraint_bound
             cur_ratio = GSnorm[-proj_dim] / (2*constraint_bound)
-        if unif:
+        if is_error_unif:
             cur_p_adm = prob_admissible_uniform(cur_axis_length, error_param)
         else:
             cur_p_adm = prob_admissible_gaussian(cur_axis_length, error_param)
@@ -388,7 +402,7 @@ def constraint_area(R, error_param, constraint_bound, GSnorm, unif=True, proj_la
     return proj_dim, p_adm, vol_ratio
 
 def prob_lsh(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
-             constraint_cube_length = 0, constraint_dim_idx = np.inf, unif = True):
+             constraint_cube_length = 0, constraint_dim_idx = np.inf, is_error_unif = True):
     '''
     Compute the torus-LSH target dimension which
     minimizes the running time of the torus-LSH based near-collision finding algorithm .
@@ -411,16 +425,17 @@ def prob_lsh(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
     p_torus_bad = 1
 
     while True:
-        cur_len = lsh_length
+        axis_len = GSnorm[lsh_last_idx]
+        cur_p_torus_good = 1
+        cur_p_torus_bad = 1
         if lsh_last_idx >= constraint_dim_idx:
-            cur_len = constraint_cube_length
-        if GSnorm[lsh_last_idx] < cur_len:
-            cur_len = GSnorm[lsh_last_idx]
-        if unif:
-            cur_p_torus_good = prob_admissible_uniform(cur_len, error_param)
-        else:
-            cur_p_torus_good = prob_admissible_gaussian(cur_len, error_param)
-        cur_p_torus_bad = cur_len / GSnorm[lsh_last_idx]
+            axis_len = constraint_cube_length
+        if axis_len > lsh_length:
+            if is_error_unif:
+                cur_p_torus_good = prob_admissible_uniform(lsh_length, error_param)
+            else:
+                cur_p_torus_good = prob_admissible_gaussian(lsh_length, error_param)
+            cur_p_torus_bad = lsh_length / axis_len
         
         if L * p_torus_bad * cur_p_torus_bad < 1 :
             if lsh_last_idx != lsh_start_idx:
@@ -451,9 +466,9 @@ def prob_lsh(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
     return values
 
 def lsh_cost(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
-             constraint_cube_length = 0, constraint_dim_idx = np.inf, unif=True):
+             constraint_cube_length = 0, constraint_dim_idx = np.inf, is_error_unif=True):
     values = prob_lsh(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
-                      constraint_cube_length, constraint_dim_idx, unif).copy()
+                      constraint_cube_length, constraint_dim_idx, is_error_unif).copy()
     log_num_collision = 2*Log2(L) + values['log_p_bad'] - values['log_p_good']
     log_cost = max(Log2(L), log_num_collision)
     try:
@@ -461,23 +476,22 @@ def lsh_cost(L, error_param, lsh_length, GSnorm, lsh_start_idx, \
     except OverflowError:
         return np.inf, values
 
-def lsh_cost_bottom(L, error_param, lsh_length, GSnorm, lsh_last_idx, \
-             constraint_cube_length = 0, constraint_dim_idx = np.inf, unif=True):
+def lsh_cost_bottom(L, error_param, lsh_length, GSnorm, lsh_last_idx, is_error_unif):
     lsh_start_idx = lsh_last_idx
     p_torus_good = 1
     p_torus_bad = 1
 
     while True:
-        cur_len = lsh_length
-        if GSnorm[lsh_start_idx] < cur_len:
-            cur_len = GSnorm[lsh_start_idx]
-        if unif:
-            cur_p_torus_good = prob_admissible_uniform(cur_len, error_param)
-        else:
-            cur_p_torus_good = prob_admissible_gaussian(cur_len, error_param)
-        cur_p_torus_bad = cur_len / GSnorm[lsh_last_idx]
+        cur_p_torus_good = 1
+        cur_p_torus_bad = 1
+        if GSnorm[lsh_start_idx] > lsh_length:
+            if is_error_unif:
+                cur_p_torus_good = prob_admissible_uniform(lsh_length, error_param)
+            else:
+                cur_p_torus_good = prob_admissible_gaussian(lsh_length, error_param)
+            cur_p_torus_bad = lsh_length / GSnorm[lsh_start_idx]
         
-        if L * p_torus_bad * cur_p_torus_bad < 1 :
+        if L**2 * p_torus_bad * cur_p_torus_bad < 1 :
             if lsh_last_idx != lsh_start_idx:
                 lsh_start_idx += 1
             else:

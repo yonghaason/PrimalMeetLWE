@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     cons_test.gen_noisy_instance(M, s, e);
     auto sol = cons_test.fast_check_near_collision(M, s, e, partial_secrets, guess_weight, constraint_bound);
     avg_sol = (avg_sol * i + (double) sol.size()) / (i+1);
-    if ((i+1) % 10 == 0) {
+    if ((i+1) % 50 == 0) {
       cout << setw(3) << "- " << i+1 << " executions: E(|L_0|) = " << avg_sol << endl;
     }
     auto filled = stats_sol.count(sol.size());

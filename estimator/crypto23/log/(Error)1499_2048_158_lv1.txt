@@ -1,0 +1,238 @@
+ Loop with zeta = 749
+ │ d = 1501: inf
+ │ d = 1126: inf
+ │ d = 1875: inf
+ │ d = 939: inf
+ │ d = 1313: inf
+ │ d = 845: inf
+ │ d = 1032: inf
+ │ d = 798: inf
+ │ d = 892: inf
+ │ d = 775: inf
+ │ d = 821: inf
+ │ d = 763: inf
+ │ d = 786: inf
+ └──── Best: inf
+ Loop with zeta = 374
+ │ d = 1876: inf
+ │ d = 1501: inf
+ │ d = 2250: inf
+ │ d = 1314: inf
+ │ d = 1688: inf
+ │ d = 1220: inf
+ │ d = 1407: inf
+ │ d = 1173: inf
+ │ d = 1267: inf
+ │ d = 1150: inf
+ │ d = 1196: inf
+ │ d = 1138: inf
+ │ d = 1161: inf
+ └──── Best: inf
+ Loop with zeta = 1124
+ │ d = 1126: inf
+ │ d = 751: inf
+ │ d = 1500: inf
+ │ d = 564: inf
+ │ d = 938: inf
+ │ d = 470: inf
+ │ d = 657: inf
+ │ d = 423: inf
+ │ d = 517: inf
+ │ d = 400: inf
+ │ d = 446: inf
+ │ d = 388: inf
+ │ d = 411: inf
+ └──── Best: inf
+ Loop with zeta = 187
+ │ d = 2063: inf
+ │ d = 1688: inf
+ │ d = 2437: inf
+ │ d = 1501: inf
+ │ d = 1875: inf
+ │ d = 1407: inf
+ │ d = 1594: inf
+ │ d = 1360: inf
+ │ d = 1454: inf
+ │ d = 1337: inf
+ │ d = 1383: inf
+ │ d = 1325: inf
+ │ d = 1348: inf
+ └──── Best: inf
+ Loop with zeta = 561
+ │ d = 1689: inf
+ │ d = 1314: inf
+ │ d = 2063: inf
+ │ d = 1127: inf
+ │ d = 1501: inf
+ │ d = 1033: inf
+ │ d = 1220: inf
+ │ d = 986: inf
+ │ d = 1080: inf
+ │ d = 963: inf
+ │ d = 1009: inf
+ │ d = 951: inf
+ │ d = 974: inf
+ └──── Best: inf
+ Loop with zeta = 93
+ │ d = 2157: inf
+ │ d = 1782: inf
+ │ d = 2531: inf
+ │ d = 1595: inf
+ │ d = 1969: inf
+ │ d = 1501: inf
+ │ d = 1688: inf
+ │ d = 1454: inf
+ │ d = 1548: inf
+ │ d = 1431: inf
+ │ d = 1477: inf
+ │ d = 1419: inf
+ │ d = 1442: inf
+ └──── Best: inf
+ Loop with zeta = 280
+ │ d = 1970: inf
+ │ d = 1595: inf
+ │ d = 2344: inf
+ │ d = 1408: inf
+ │ d = 1782: inf
+ │ d = 1314: inf
+ │ d = 1501: inf
+ │ d = 1267: inf
+ │ d = 1361: inf
+ │ d = 1244: inf
+ │ d = 1290: inf
+ │ d = 1232: inf
+ │ d = 1255: inf
+ └──── Best: inf
+ Loop with zeta = 46
+ │ d = 2204: inf
+ │ d = 1829: inf
+ │ d = 2578: inf
+ │ d = 1642: inf
+ │ d = 2016: inf
+ │ d = 1548: inf
+ │ d = 1735: inf
+ │ d = 1501: inf
+ │ d = 1595: inf
+ │ d = 1478: inf
+ │ d = 1524: inf
+ │ d = 1466: inf
+ │ d = 1489: inf
+ └──── Best: inf
+ Loop with zeta = 140
+ │ d = 2110: inf
+ │ d = 1735: inf
+ │ d = 2484: inf
+ │ d = 1548: inf
+ │ d = 1922: inf
+ │ d = 1454: inf
+ │ d = 1641: inf
+ │ d = 1407: inf
+ │ d = 1501: inf
+ │ d = 1384: inf
+ │ d = 1430: inf
+ │ d = 1372: inf
+ │ d = 1395: inf
+ └──── Best: inf
+ Loop with zeta = 23
+ │ d = 2227: inf
+ │ d = 1852: inf
+ │ d = 2601: inf
+ │ d = 1665: inf
+ │ d = 2039: inf
+ │ d = 1571: inf
+ │ d = 1758: inf
+ │ d = 1524: inf
+ │ d = 1618: inf
+ │ d = 1501: inf
+ │ d = 1547: inf
+ │ d = 1489: inf
+ │ d = 1512: inf
+ └──── Best: inf
+ Loop with zeta = 69
+ │ d = 2181: inf
+ │ d = 1806: inf
+ │ d = 2555: inf
+ │ d = 1619: inf
+ │ d = 1993: inf
+ │ d = 1525: inf
+ │ d = 1712: inf
+ │ d = 1478: inf
+ │ d = 1572: inf
+ │ d = 1455: inf
+ │ d = 1501: inf
+ │ d = 1443: inf
+ │ d = 1466: inf
+ └──── Best: inf
+ Loop with zeta = 11
+ │ d = 2239: inf
+ │ d = 1864: inf
+ │ d = 2613: inf
+ │ d = 1677: inf
+ │ d = 2051: inf
+ │ d = 1583: inf
+ │ d = 1770: inf
+ │ d = 1536: inf
+ │ d = 1630: inf
+ │ d = 1513: inf
+ │ d = 1559: inf
+ │ d = 1501: inf
+ │ d = 1524: inf
+ └──── Best: inf
+ Loop with zeta = 34
+ │ d = 2216: inf
+ │ d = 1841: inf
+ │ d = 2590: inf
+ │ d = 1654: inf
+ │ d = 2028: inf
+ │ d = 1560: inf
+ │ d = 1747: inf
+ │ d = 1513: inf
+ │ d = 1607: inf
+ │ d = 1490: inf
+ │ d = 1536: inf
+ │ d = 1478: inf
+ │ d = 1501: inf
+ └──── Best: inf
+ Loop with zeta = 5
+ │ d = 2245: inf
+ │ d = 1870: inf
+ │ d = 2619: inf
+ │ d = 1683: inf
+ │ d = 2057: inf
+ │ d = 1589: inf
+ │ d = 1776: inf
+ │ d = 1542: inf
+ │ d = 1636: inf
+ │ d = 1519: inf
+ │ d = 1565: inf
+ │ d = 1507: inf
+ │ d = 1530: inf
+ └──── Best: inf
+ Loop with zeta = 17
+ │ d = 2233: inf
+ │ d = 1858: inf
+ │ d = 2607: inf
+ │ d = 1671: inf
+ │ d = 2045: inf
+ │ d = 1577: inf
+ │ d = 1764: inf
+ │ d = 1530: inf
+ │ d = 1624: inf
+ │ d = 1507: inf
+ │ d = 1553: inf
+ │ d = 1495: inf
+ │ d = 1518: inf
+ └──── Best: inf
+----------------------
+* Final Cost: inf
+   - 'zeta': 5
+   - 'd': 1507
+   - 'beta': 55
+   - 'nu': 2.526
+   - 'last_R': 0.0
+   - 'log_pr_np': inf
+----------------------
+Input Params
+n = 1499, q = 2048, stddev = 0.82, m = 1499
+HW(s) = 158
+----------------------

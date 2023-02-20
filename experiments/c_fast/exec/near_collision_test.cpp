@@ -6,7 +6,7 @@
 #include <map>
 
 // Example
-// ./nc_test -m 25 -q 4096 -e 3 -l 6 -k 10 -u 1
+// ./nc_test -m 25 -q 4096 -e 3 -b 6 -r 10 -u 1
 
 using namespace std;
 
@@ -28,11 +28,11 @@ int main(int argc, char* argv[]) {
   parser.add<uint32_t>("m", 'm', "Dimension of list vectors", true, 20);
   parser.add<uint64_t>("q", 'q', "Domain length", true, 1024);
   parser.add<double>("stddev", 'e', "error stddev (gaussian) or bound (unif)", true, 3.2);
-  parser.add<double>("lsh_length", 'l', "LSH box length", true, 0);
-  parser.add<size_t>("lsh_dim", 'k', "LSH dimension", true, 10);
+  parser.add<double>("lsh_length", 'b', "LSH box length", true, 0);
+  parser.add<size_t>("lsh_dim", 'r', "LSH dimension", true, 10);
   parser.add<uint64_t>("iter_mult", '\0', "Iteration multiple", false, 3);
   parser.add<bool>("unif", 'u', "Error unif?", true, true);
-  parser.add<uint64_t>("list_size", 'N', "List size", false, 1000);
+  parser.add<uint64_t>("list_size", 'N', "List size", false, 0);
   
   parser.parse_check(argc, argv);
 
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
   iteration_multiple = parser.get<uint64_t>("iter_mult");
   unif = parser.get<bool>("unif");
   
-  if (unif && (lsh_length < 2*e)) {
+  if (unif && (lsh_length < e)) {
     cout << "!!! Some error can exceed LSH length !!!\n"
          << "(= LSH never finds some near-collision pairs.)" << endl;
   }
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   NearCollisionTest nc_test(m, q, e, unif);
 
   auto near_collision_num = 1000;
-  auto L = nc_test.gen_instance(near_collision_num);
+  auto L = nc_test.gen_instance(near_collision_num, N);
   auto sol = nc_test.lsh_based_search(L, lsh_length, lsh_dim, iteration_multiple);
   cout << endl;
   cout << "Found " << sol.size() << " good pairs " 

@@ -1,0 +1,239 @@
+ Loop with zeta = 410
+ │ d = 823: inf
+ │ d = 618: inf
+ │ d = 1028: inf
+ │ d = 515: inf
+ │ d = 720: inf
+ │ d = 464: inf
+ │ d = 566: inf
+ │ d = 438: inf
+ │ d = 489: inf
+ │ d = 425: inf
+ │ d = 451: inf
+ │ d = 419: inf
+ │ d = 431: inf
+ └──── Best: inf
+ Loop with zeta = 205
+ │ d = 1028: inf
+ │ d = 823: inf
+ │ d = 1233: inf
+ │ d = 720: inf
+ │ d = 925: inf
+ │ d = 669: inf
+ │ d = 771: inf
+ │ d = 643: inf
+ │ d = 694: inf
+ │ d = 630: inf
+ │ d = 656: inf
+ │ d = 624: inf
+ │ d = 636: inf
+ └──── Best: inf
+ Loop with zeta = 615
+ │ d = 618: inf
+ │ d = 413: inf
+ │ d = 823: inf
+ │ d = 310: inf
+ │ d = 515: inf
+ │ d = 259: inf
+ │ d = 361: inf
+ │ d = 233: inf
+ │ d = 284: inf
+ │ d = 220: inf
+ │ d = 246: inf
+ │ d = 214: inf
+ │ d = 226: inf
+ └──── Best: inf
+ Loop with zeta = 102
+ │ d = 1131: inf
+ │ d = 926: inf
+ │ d = 1336: inf
+ │ d = 823: inf
+ │ d = 1028: inf
+ │ d = 772: inf
+ │ d = 874: inf
+ │ d = 746: inf
+ │ d = 797: inf
+ │ d = 733: inf
+ │ d = 759: inf
+ │ d = 727: inf
+ │ d = 739: inf
+ └──── Best: inf
+ Loop with zeta = 307
+ │ d = 926: inf
+ │ d = 721: inf
+ │ d = 1131: inf
+ │ d = 618: inf
+ │ d = 823: inf
+ │ d = 567: inf
+ │ d = 669: inf
+ │ d = 541: inf
+ │ d = 592: inf
+ │ d = 528: inf
+ │ d = 554: inf
+ │ d = 522: inf
+ │ d = 534: inf
+ └──── Best: inf
+ Loop with zeta = 51
+ │ d = 1182: inf
+ │ d = 977: inf
+ │ d = 1387: inf
+ │ d = 874: inf
+ │ d = 1079: inf
+ │ d = 823: inf
+ │ d = 925: inf
+ │ d = 797: inf
+ │ d = 848: inf
+ │ d = 784: inf
+ │ d = 810: inf
+ │ d = 778: inf
+ │ d = 790: inf
+ └──── Best: inf
+ Loop with zeta = 153
+ │ d = 1080: inf
+ │ d = 875: inf
+ │ d = 1285: inf
+ │ d = 772: inf
+ │ d = 977: inf
+ │ d = 721: inf
+ │ d = 823: inf
+ │ d = 695: inf
+ │ d = 746: inf
+ │ d = 682: inf
+ │ d = 708: inf
+ │ d = 676: inf
+ │ d = 688: inf
+ └──── Best: inf
+ Loop with zeta = 25
+ │ d = 1208: inf
+ │ d = 1003: inf
+ │ d = 1413: inf
+ │ d = 900: inf
+ │ d = 1105: inf
+ │ d = 849: inf
+ │ d = 951: inf
+ │ d = 823: inf
+ │ d = 874: inf
+ │ d = 810: inf
+ │ d = 836: inf
+ │ d = 804: inf
+ │ d = 816: inf
+ └──── Best: inf
+ Loop with zeta = 76
+ │ d = 1157: inf
+ │ d = 952: inf
+ │ d = 1362: inf
+ │ d = 849: inf
+ │ d = 1054: inf
+ │ d = 798: inf
+ │ d = 900: inf
+ │ d = 772: inf
+ │ d = 823: inf
+ │ d = 759: inf
+ │ d = 785: inf
+ │ d = 753: inf
+ │ d = 765: inf
+ └──── Best: inf
+ Loop with zeta = 12
+ │ d = 1221: inf
+ │ d = 1016: inf
+ │ d = 1426: inf
+ │ d = 913: inf
+ │ d = 1118: inf
+ │ d = 862: inf
+ │ d = 964: inf
+ │ d = 836: inf
+ │ d = 887: inf
+ │ d = 823: inf
+ │ d = 849: inf
+ │ d = 817: inf
+ │ d = 829: inf
+ └──── Best: inf
+ Loop with zeta = 38
+ │ d = 1195: inf
+ │ d = 990: inf
+ │ d = 1400: inf
+ │ d = 887: inf
+ │ d = 1092: inf
+ │ d = 836: inf
+ │ d = 938: inf
+ │ d = 810: inf
+ │ d = 861: inf
+ │ d = 797: inf
+ │ d = 823: inf
+ │ d = 791: inf
+ │ d = 803: inf
+ └──── Best: inf
+ Loop with zeta = 6
+ │ d = 1227: inf
+ │ d = 1022: inf
+ │ d = 1432: inf
+ │ d = 919: inf
+ │ d = 1124: inf
+ │ d = 868: inf
+ │ d = 970: inf
+ │ d = 842: inf
+ │ d = 893: inf
+ │ d = 829: inf
+ │ d = 855: inf
+ │ d = 823: inf
+ │ d = 835: inf
+ └──── Best: inf
+ Loop with zeta = 18
+ │ d = 1215: inf
+ │ d = 1010: inf
+ │ d = 1420: inf
+ │ d = 907: inf
+ │ d = 1112: inf
+ │ d = 856: inf
+ │ d = 958: inf
+ │ d = 830: inf
+ │ d = 881: inf
+ │ d = 817: inf
+ │ d = 843: inf
+ │ d = 811: inf
+ │ d = 823: inf
+ └──── Best: inf
+ Loop with zeta = 3
+ │ d = 1230: inf
+ │ d = 1025: inf
+ │ d = 1435: inf
+ │ d = 922: inf
+ │ d = 1127: inf
+ │ d = 871: inf
+ │ d = 973: inf
+ │ d = 845: inf
+ │ d = 896: inf
+ │ d = 832: inf
+ │ d = 858: inf
+ │ d = 826: inf
+ │ d = 838: inf
+ └──── Best: inf
+ Loop with zeta = 9
+ │ d = 1224: inf
+ │ d = 1019: inf
+ │ d = 1429: inf
+ │ d = 916: inf
+ │ d = 1121: inf
+ │ d = 865: inf
+ │ d = 967: inf
+ │ d = 839: inf
+ │ d = 890: inf
+ │ d = 826: inf
+ │ d = 852: inf
+ │ d = 820: inf
+ │ d = 832: inf
+ └──── Best: inf
+----------------------
+* Final Cost: inf
+   - 'zeta': 3
+   - 'd': 826
+   - 'beta': 52
+   - 'nu': 1.036
+   - 'last_R': 0.0
+   - 'log_pr_np': inf
+----------------------
+Input Params
+n = 821, q = 4096, stddev = 0.82, m = 821
+HW(s) = 510
+(The input uniform error distribution is considered as a gaussian with the same variance)
+----------------------

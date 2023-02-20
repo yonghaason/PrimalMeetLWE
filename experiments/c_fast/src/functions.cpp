@@ -269,110 +269,13 @@ set<pair<secret, secret>> ConstraintTest::check_near_collision(
   return sol;
 }
 
-// set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
-//   vector<pair<secret, vector<double>>>& L, double e, vector<double>& GSnorm, uint32_t h, 
-//   vector<size_t>& box_num, vector<double>& lsh_lengths, vector<double>& lsh_dom, 
-//   uint64_t iteration_multiple, bool unif)
-// {
-//   set<pair<vector<int64_t>, vector<int64_t>>> sol;
-
-//   random_device rd;
-//   mt19937 gen(rd());
-
-//   auto n = L[0].first.size();
-//   auto m = L[0].second.size();
-
-//   double p_good = 1, p_bad = 1;
-//   double k = 0;
-
-//   while (true) {
-//     double cur_p_good = 1;
-//     double cur_p_bad = lsh_lengths[k] / lsh_dom[k];
-//     if (box_num[k] > 1) {
-//       if (unif) cur_p_good = prob_admissible_uniform(e, lsh_lengths[k]); 
-//       else cur_p_good = prob_admissible_gaussian(e, lsh_lengths[k]);
-//     }
-    
-//     if (L.size() * p_bad * cur_p_bad < 1.0) break;
-
-//     else {
-//       p_good *= cur_p_good;
-//       p_bad *= cur_p_bad;
-//       if (k == m) break;
-//       k += 1;
-//     }
-//   }
-
-//   uint64_t iteration = ceil(iteration_multiple / p_good);
-//   vector<uint64_t> iter_checks{0};
-//   for (size_t i = 0; i < iteration_multiple; i++) {
-//     iter_checks.push_back(ceil((i+1) / p_good));
-//   }
-  
-//   auto collision_condition = unif? e: 6*e;
-
-//   cout << " (LSH dim = " << k << ", p_good = " << p_good << ", p_bad = " << p_bad << ")" << endl;
-
-//   for (size_t cp = 0; cp < iteration_multiple; cp++) {
-//     for (size_t iter = iter_checks[cp]; iter < iter_checks[cp+1]; iter++) {    
-//       // Pick torus-LSH by starting points
-//       vector<double> lsh_starts(k);
-//       for (size_t i = 0; i < k; i++) {
-//         uniform_real_distribution<double> lsh_random_starts(0, lsh_lengths[i]);
-//         lsh_starts[i] = lsh_random_starts(gen);
-//       }
-
-//       // Fill LSH table
-//       map<vector<uint32_t>, vector<pair<secret, vector<double>>>> hash_table;
-//       for (auto& p: L) {
-//         auto Mv = p.second;
-//         std::vector<uint32_t> address(k);
-//         vector<pair<secret, vector<double>>> bin;
-//         for (size_t i = 0; i < k; i++) {
-//           int64_t a = floor((Mv[i] - lsh_starts[i]) / lsh_lengths[i]);
-//           address[i] = a % box_num[i];
-//         }
-//         if (hash_table.count(address) > 0) {
-//           hash_table[address].push_back(p);
-//         }
-//         else {
-//           hash_table[address] = vector<pair<secret, vector<double>>>{p};
-//         }
-//       }
-        
-//       for (auto &iterator: hash_table) {
-//         auto bin = iterator.second;
-//         auto N = bin.size();
-//         auto n = bin[0].first.size();
-//         for (size_t i = 0; i < N; i++) {
-//           for (size_t j = 0; j < N; j++) {
-//             auto s_ = subvec(bin[i].first, bin[j].first);
-//             if (hamming_weight(s_) != h)
-//               continue;
-//             if (s_[n-1] == 1)
-//               continue;
-            
-//             auto Ms_ = subvec(bin[i].second, bin[j].second);
-//             fmodvec(Ms_, GSnorm);
-
-//             if (inf_norm(Ms_) <= collision_condition)
-//               sol.insert(make_pair(bin[i].first, bin[j].first));
-//           }
-//         }
-//       }
-//     }
-//     cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
-//   }
-  
-//   return sol;
-// };
-
 NearCollisionTest::NearCollisionTest(uint32_t m, uint64_t q, double e, bool unif)
   : m(m), e(e), unif(unif)
 {
   dom.resize(m);
   for (size_t i = 0; i < m; i++) {
     dom[i] = pow(q, (1.0 - (double) i/(2*m)));
+    // dom[i] = q;
   }
 
   cout << "------- LSH near-collision test -------" << endl;  
@@ -434,16 +337,19 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
   vector<size_t> box_num(m);
   vector<double> lsh_lengths(m);
 
-    for (size_t i = 0; i < m; i++) {
+  double p_bad = 1;  
+
+  for (size_t i = 0; i < m; i++) {
     if (dom[i] < lsh_length) box_num[i] = 1;
     else box_num[i] = ceil(dom[i] / lsh_length);
     lsh_lengths[i] = (double) dom[i] / box_num[i];
+    p_bad /= box_num[i];
   }
   
   random_device rd;
   mt19937 gen(rd());
 
-  double p_good = 1; // p_bad = 1;
+  double p_good = 1; 
   
   for (size_t i = 0; i < lsh_dim; i++) {
     if (box_num[i] > 1) {
@@ -460,7 +366,9 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
 
   double near_collision_condition = unif? e: 6*e;
   
-  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << endl;
+  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << ", p_bad = " << p_bad << endl;
+
+  size_t hash_collision_num = 0;
 
   for (size_t cp = 0; cp < iter_multiple; cp++) {
     for (size_t i = iter_checks[cp]; i < iter_checks[cp+1]; i++) {
@@ -493,20 +401,20 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
         auto N = bin.size();
         for (size_t i = 0; i < N; i++) {
           for (size_t j = i+1; j < N; j++) {
-            auto check = subvec(bin[i], bin[j]);
+            auto check = subvec(bin[i], bin[j]);            
             if (inf_norm(check) <= near_collision_condition) {
-              // auto this_pair = make_pair(bin[i], bin[j]);
-              // if (find(good_pairs.begin(), good_pairs.end(), this_pair) != good_pairs.end()) {
               sol.insert(check);
-              // }
+              hash_collision_num++;
             } 
-              
           }
         }
       }
     }
     cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
   }
-  
+
+  cout << "# Total hash collision = " << hash_collision_num << endl;
+  cout << "(Expected 1.5 * |L|^2 * p_bad / p_good = " << 1.5 * L.size() * p_bad / p_good << endl;
+
   return sol;
 };

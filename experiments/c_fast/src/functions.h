@@ -61,12 +61,15 @@ public:
   set<pair<secret, secret>> fast_check_near_collision(
     matrix& M, secret& s, vector<double>& e, 
     vector<secret>& partial_list, uint32_t guess_weight, double box_length);
-    
-  // /* Torus LSH-based search method */
-  // set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
-  //   my_list& L, double e, vector<double>& GSnorm, uint32_t h, 
-  //   vector<size_t>& box_num, vector<double>& lsh_lengths, vector<double>& lsh_domain, 
-  //   uint64_t iteration_multiple, bool unif);
+
+  uint32_t new_check_near_collision(
+    matrix& M, secret& s, vector<double>& e, 
+    uint32_t guess_weight, double constraint_bound);   
+
+  void recur_check(
+    uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
+    vector<int32_t>& nonzeroidx, vector<int32_t>& sign, vector<double>& Ms1, // vector<size_t>& arr, vector<size_t>& idx, 
+    uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k);
 
   uint64_t proj_dim;
   uint64_t full_list_size;

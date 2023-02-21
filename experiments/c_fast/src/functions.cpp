@@ -98,6 +98,59 @@ vector<secret> ConstraintTest::enumerate_secrets(uint32_t d, uint32_t w)
   }
 }
 
+uint32_t ConstraintTest::new_check_near_collision(
+  matrix& M, secret& s, vector<double>& e, 
+  uint32_t guess_weight, double constraint_bound) 
+{
+  matrix Mtrans = transpose(M);
+  uint32_t count = 0;
+  vector<double> Ms1(m);
+  vector<int32_t> nonzeroidx(guess_weight);
+  vector<int32_t> sign(guess_weight);
+  recur_check(count, Mtrans, e, s, constraint_bound, 
+              nonzeroidx, sign, Ms1, 0, n-1, 0, guess_weight);
+  return count;
+}
+
+void ConstraintTest::recur_check(
+  uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
+  vector<int32_t>& nonzeroidx, vector<int32_t>& sign, vector<double>& Ms1, 
+  uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k)
+{
+  if (cur_hw == k) {
+    secret s1(n);
+    for (size_t i = 0; i < nonzeroidx.size(); i++) {
+      if (sign[i] == 1) s1[nonzeroidx[i]] = 1;
+      else s1[nonzeroidx[i]] = -1;
+    }
+    auto s2 = sub(s1, s);
+    if (weight_ternary_check(s2, k)) {
+      fmodvec(Ms1, GSnorm);
+      if (inf_norm(Ms1, m-proj_dim) <= constraint_bound) {
+        auto Ms2 = subvec(Ms1, e);
+        fmodvec(Ms2, GSnorm);
+        if (inf_norm(Ms2, m-proj_dim) <= constraint_bound) {
+          count++;
+        }
+      }
+    }
+  }
+  else {
+    vector<double> Ms1_next(m);
+    for (int i = start; i <= end && end - i + 1 >= k - cur_hw; i++) {
+        nonzeroidx[cur_hw] = i;
+        sign[cur_hw] = 1;
+        Ms1_next = addvec(Ms1, Mtrans[i]);
+        recur_check(count, Mtrans, e, s, constraint_bound,
+                    nonzeroidx, sign, Ms1_next, i+1, end, cur_hw+1, k);
+        sign[cur_hw] = -1;  
+        Ms1_next = subvec(Ms1, Mtrans[i]);
+        recur_check(count, Mtrans, e, s, constraint_bound,
+                    nonzeroidx, sign, Ms1_next, i+1, end, cur_hw+1, k);
+    }
+  }
+}
+
 void ConstraintTest::gen_noisy_instance(
   matrix& M, vector<int64_t>& s, vector<double>& error)
 {

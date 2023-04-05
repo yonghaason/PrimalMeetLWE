@@ -1,0 +1,207 @@
+----------------------
+Input Params
+n = 508, q = 2048, stddev = 0.82, m = 508
+HW(s) = 254
+(The input uniform error distribution is considered as a gaussian with the same variance)
+----------------------
+     zeta = 254 / d = 509 : 242.23
+     zeta = 254 / d = 382 : 287.86
+     zeta = 254 / d = 636 : 240.02
+     zeta = 254 / d = 572 : 241.01
+     zeta = 254 / d = 699 : 238.85
+     zeta = 254 / d = 667 : 238.61
+     zeta = 254 / d = 731 : 239.05
+     zeta = 254 / d = 651 : 240.15
+     zeta = 254 / d = 683 : 238.73
+     zeta = 254 / d = 659 : 240.21
+     zeta = 254 / d = 675 : 238.67
+ WIP: zeta = 254 : 238.610000
+     zeta = 127 / d = 636 : 162.18
+     zeta = 127 / d = 509 : inf
+     zeta = 127 / d = 763 : 149.28
+     zeta = 127 / d = 699 : 153.51
+     zeta = 127 / d = 826 : 148.4
+     zeta = 127 / d = 794 : 148.63
+     zeta = 127 / d = 858 : 148.5
+     zeta = 127 / d = 810 : 148.46
+     zeta = 127 / d = 842 : 148.41
+     zeta = 127 / d = 818 : 148.42
+     zeta = 127 / d = 834 : 148.39
+ WIP: zeta = 127 : 148.390000
+     zeta = 381 / d = 382 : inf
+     zeta = 381 / d = 255 : inf
+     zeta = 381 / d = 509 : inf
+     zeta = 381 / d = 192 : inf
+     zeta = 381 / d = 318 : inf
+     zeta = 381 / d = 160 : inf
+     zeta = 381 / d = 223 : inf
+     zeta = 381 / d = 144 : inf
+     zeta = 381 / d = 176 : inf
+     zeta = 381 / d = 136 : inf
+     zeta = 381 / d = 152 : inf
+ WIP: zeta = 381 : inf
+     zeta = 63 / d = 700 : inf
+     zeta = 63 / d = 573 : inf
+     zeta = 63 / d = 827 : inf
+     zeta = 63 / d = 510 : inf
+     zeta = 63 / d = 636 : inf
+     zeta = 63 / d = 478 : inf
+     zeta = 63 / d = 541 : inf
+     zeta = 63 / d = 462 : inf
+     zeta = 63 / d = 494 : inf
+     zeta = 63 / d = 454 : inf
+     zeta = 63 / d = 470 : inf
+ WIP: zeta = 63 : inf
+     zeta = 190 / d = 573 : 168.52
+     zeta = 190 / d = 446 : inf
+     zeta = 190 / d = 700 : 165.53
+     zeta = 190 / d = 636 : 167.4
+     zeta = 190 / d = 763 : 165.69
+     zeta = 190 / d = 667 : 167.25
+     zeta = 190 / d = 731 : 165.58
+     zeta = 190 / d = 683 : 165.53
+     zeta = 190 / d = 715 : 165.54
+     zeta = 190 / d = 675 : 167.24
+     zeta = 190 / d = 691 : 165.53
+ WIP: zeta = 190 : 165.530000
+     zeta = 94 / d = 669 : inf
+     zeta = 94 / d = 542 : inf
+     zeta = 94 / d = 796 : inf
+     zeta = 94 / d = 479 : inf
+     zeta = 94 / d = 605 : inf
+     zeta = 94 / d = 447 : inf
+     zeta = 94 / d = 510 : inf
+     zeta = 94 / d = 431 : inf
+     zeta = 94 / d = 463 : inf
+     zeta = 94 / d = 423 : inf
+     zeta = 94 / d = 439 : inf
+ WIP: zeta = 94 : inf
+     zeta = 158 / d = 605 : 155.89
+     zeta = 158 / d = 478 : inf
+     zeta = 158 / d = 732 : 149.37
+     zeta = 158 / d = 668 : 150.57
+     zeta = 158 / d = 795 : 147.49
+     zeta = 158 / d = 763 : 149.2
+     zeta = 158 / d = 827 : 147.67
+     zeta = 158 / d = 779 : 147.46
+     zeta = 158 / d = 811 : 147.56
+     zeta = 158 / d = 771 : 147.47
+     zeta = 158 / d = 787 : 147.46
+ WIP: zeta = 158 : 147.460000
+     zeta = 142 / d = 621 : 157.71
+     zeta = 142 / d = 494 : inf
+     zeta = 142 / d = 748 : 146.66
+     zeta = 142 / d = 684 : 150.29
+     zeta = 142 / d = 811 : 146.0
+     zeta = 142 / d = 779 : 146.1
+     zeta = 142 / d = 843 : 146.15
+     zeta = 142 / d = 795 : 146.02
+     zeta = 142 / d = 827 : 146.05
+     zeta = 142 / d = 803 : 146.01
+     zeta = 142 / d = 819 : 146.02
+ WIP: zeta = 142 : 146.000000
+     zeta = 174 / d = 589 : 159.57
+     zeta = 174 / d = 462 : inf
+     zeta = 174 / d = 716 : 155.42
+     zeta = 174 / d = 652 : 156.31
+     zeta = 174 / d = 779 : 154.19
+     zeta = 174 / d = 747 : 155.24
+     zeta = 174 / d = 811 : 154.38
+     zeta = 174 / d = 763 : 154.13
+     zeta = 174 / d = 795 : 154.26
+     zeta = 174 / d = 755 : 155.24
+     zeta = 174 / d = 771 : 154.16
+ WIP: zeta = 174 : 154.130000
+     zeta = 134 / d = 629 : 159.65
+     zeta = 134 / d = 502 : inf
+     zeta = 134 / d = 756 : 147.91
+     zeta = 134 / d = 692 : 151.42
+     zeta = 134 / d = 819 : 146.71
+     zeta = 134 / d = 787 : 146.87
+     zeta = 134 / d = 851 : 146.85
+     zeta = 134 / d = 803 : 146.75
+     zeta = 134 / d = 835 : 146.75
+     zeta = 134 / d = 811 : 146.72
+     zeta = 134 / d = 827 : 146.72
+ WIP: zeta = 134 : 146.710000
+     zeta = 150 / d = 613 : 156.81
+     zeta = 150 / d = 486 : inf
+     zeta = 150 / d = 740 : 147.52
+     zeta = 150 / d = 676 : 149.9
+     zeta = 150 / d = 803 : 146.07
+     zeta = 150 / d = 771 : 146.1
+     zeta = 150 / d = 835 : 146.26
+     zeta = 150 / d = 787 : 146.05
+     zeta = 150 / d = 819 : 146.14
+     zeta = 150 / d = 779 : 146.07
+     zeta = 150 / d = 795 : 146.05
+ WIP: zeta = 150 : 146.050000
+     zeta = 138 / d = 625 : 158.49
+     zeta = 138 / d = 498 : inf
+     zeta = 138 / d = 752 : 147.48
+     zeta = 138 / d = 688 : 150.49
+     zeta = 138 / d = 815 : 146.24
+     zeta = 138 / d = 783 : 146.37
+     zeta = 138 / d = 847 : 146.38
+     zeta = 138 / d = 799 : 146.26
+     zeta = 138 / d = 831 : 146.27
+     zeta = 138 / d = 807 : 146.24
+     zeta = 138 / d = 823 : 146.24
+ WIP: zeta = 138 : 146.240000
+     zeta = 146 / d = 617 : 156.98
+     zeta = 146 / d = 490 : inf
+     zeta = 146 / d = 744 : 146.43
+     zeta = 146 / d = 680 : 150.23
+     zeta = 146 / d = 807 : 145.74
+     zeta = 146 / d = 775 : 146.11
+     zeta = 146 / d = 839 : 145.96
+     zeta = 146 / d = 791 : 145.77
+     zeta = 146 / d = 823 : 145.82
+     zeta = 146 / d = 799 : 145.74
+     zeta = 146 / d = 815 : 145.77
+ WIP: zeta = 146 : 145.740000
+     zeta = 144 / d = 619 : 157.42
+     zeta = 144 / d = 492 : inf
+     zeta = 144 / d = 746 : 146.42
+     zeta = 144 / d = 682 : 150.23
+     zeta = 144 / d = 809 : 145.99
+     zeta = 144 / d = 777 : 146.06
+     zeta = 144 / d = 841 : 146.13
+     zeta = 144 / d = 793 : 145.99
+     zeta = 144 / d = 825 : 146.03
+     zeta = 144 / d = 785 : 146.02
+     zeta = 144 / d = 801 : 145.98
+ WIP: zeta = 144 : 145.980000
+     zeta = 148 / d = 615 : 156.85
+     zeta = 148 / d = 488 : inf
+     zeta = 148 / d = 742 : 147.35
+     zeta = 148 / d = 678 : 150.31
+     zeta = 148 / d = 805 : 145.88
+     zeta = 148 / d = 773 : 146.24
+     zeta = 148 / d = 837 : 146.08
+     zeta = 148 / d = 789 : 145.87
+     zeta = 148 / d = 821 : 145.95
+     zeta = 148 / d = 781 : 146.0
+     zeta = 148 / d = 797 : 145.87
+ WIP: zeta = 148 : 145.870000
+----------------------
+* Final Cost: 145.74
+   - 'lat': {'cost': 135.0, 'zeta': 146, 'd': 799, 'beta': 376, 'nu': 1.155, 'last_R': 2.48, 'log_pr_np': -5.62}
+   - 'w_guess': 64
+   - 'guess_cost': 134.92
+   - 'log_p_hw': -5.12
+Guess details:
+   - 'log_S_i': [139.11, 85.56]
+   - 'w_i': [64, 32, 16]
+   - 'log_R_i': [60.67, 29.16]
+   - 'log_L_i': [4.41, 106.82, 75.27]
+   - 'log_cost_babai': [23.69, 122.98, 85.84]
+   - 'log_cost_lsh': [106.82, 134.43]
+   - 'proj_dim': [799, 271, 39]
+   - 'log_p_rep': [-60.15]
+   - 'log_vol_ratio': [32.3]
+   - 'cons_bound': [0.816496580927726]
+   - 'log_p_adm': [-8.59]
+---- Further details on guess
+* lsh info of Lv 1 -> 0 : {'box_length': 4.898979485566356, 'lsh_coords': [528, 760], 'log_p_good': -50.1, 'log_p_bad': -212.05}
+* lsh info of Lv 2 -> 1 : {'box_length': 1.632993161855452, 'lsh_coords': [760, 798], 'log_p_good': -16.19, 'log_p_bad': -32.3}

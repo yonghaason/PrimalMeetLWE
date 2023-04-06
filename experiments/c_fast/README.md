@@ -12,8 +12,7 @@ make
 This will make executables `adm_test`, `cons_test`, `nc_test` in the same directory.
 
 ### Experiment 1. Admissible Probability
-This experiments confirms the exact formula of the admissible probability in the Supplementary Materials.
-A simple test for admissible probability.
+This experiment is a simple test for admissible probability. It confirms the exact formula of the admissible probability in the Supplementary Materials.
 ```bash
 ./adm_test
 ```

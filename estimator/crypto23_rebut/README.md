@@ -7,7 +7,7 @@ Provide attack cost estimation for some hybrid attacks of (primal) lattice reduc
 - Lv $\ge$ 2: Primal + Meet-LWE [May, C21] = Ours
 
  
-> This DON'T cover the non-hybrid (pure primal) attack [AGPW17], which is based on another clever idea that is incompatible with hybrid strategy.
+> This DON'T cover the non-hybrid (pure primal) attack [[AGVW17](https://eprint.iacr.org/2017/815.pdf)], which is based on another clever idea that is incompatible with hybrid strategy. For this attack estimation, we used [lattice-estimator](https://github.com/malb/lattice-estimator/) that covers this attack as `usvp`.
 
 ## How to use?
 
@@ -21,10 +21,12 @@ In 'python (checked with 3.8)' shell (NOT 'sage' shell!):
 >>> primal_may(param, lv=2)
 ```
 
-> It takes LONG LONG time (over several hours!) for high levels, or large LWE parameters. So if the reviewer is curious about the detailed parameters, we recommend to see the text files in `logs' directory.
+> It may takes LONG time (can be several hours!) for high levels, or large LWE parameters. So if the reviewer is curious about the detailed parameters, we recommend to see the text files in `logs' directory.
 
- ### About the relation and consistency with `lattice-estimator'
+ ### About the relation and consistency with [lattice-estimator](https://github.com/malb/lattice-estimator/)
 
-Our level-0 attack strategy is exactly the same with `primal_hybrid' with options `mitm=False, babai=True' in lattice-estimator. We observe that both scripts output similar numbers for this strategy.
+Our level-0 attack strategy is exactly the same with `primal_hybrid` with options `mitm=False, babai=True` in [lattice-estimator](https://github.com/malb/lattice-estimator/). We observe that both scripts output similar numbers for this strategy.
 
-Meanwhile, our level-1 attack strategy is almost similar to the primal-MitM hytbrid attack [HG07], but has a small optimization on Babai NP call compared to it. 
+Meanwhile, our level-1 attack strategy is almost similar to the primal-MitM hybrid attack [HG07], but has a small optimization on Babai NP call compared to it. 
+The [lattice-estimator](https://github.com/malb/lattice-estimator/) covers the original primal-MitM hybrid attack by `primal_hybrid` with options `mitm=True, babai=True`.
+Our estimation is a bit lower thanks to our NP dimension optimization.

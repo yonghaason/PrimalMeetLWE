@@ -21,7 +21,7 @@ will give how to insert arguments, for example
 ```bash
 ./adm_test -l 10 -e 20 -u 1
 ```
-**Caution**: The box length $\ell$ is slightly different from the paper definition (where $2\ell$ is the box length).
+> **Caution**: The box length $\ell$ comes from $[0, \ell]$. This is slightly different from the paper definition that defines a box by $[-\ell, \ell)$. 
 
 ### Experiment 2. Number of pairs in constraints
 

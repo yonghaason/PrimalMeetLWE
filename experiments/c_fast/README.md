@@ -32,7 +32,7 @@ This experiment validates this claim (and hence also indirectly validates underl
 ```
 will give how to insert arguments, for example
 ```bash
-./cons_test -d 30 -h 10 -w 6 -u 0 -e 3 -l 10 -t 10
+./cons_test -d 30 -h 6 -w 4 -u 0 -e 3 -l 10 -t 10
 ```
 
 ### Experiment 3. LSH-based Near-collision Finding

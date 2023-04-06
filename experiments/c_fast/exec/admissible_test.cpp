@@ -12,10 +12,10 @@ int main(int argc, char* argv[]) {
   mt19937 gen(rd());
 
   cmdline::parser parser;
-  parser.add<double>("box_length", 'b', "Box length", true, 0);
-  parser.add<double>("error", 'e', "error param", true, 0);
-  parser.add<bool>("unif", 'u', "unif error?", true, 0);
-  parser.add<uint32_t>("repeat", 'N', "repetition", false, 1000000);
+  parser.add<double>("box_length", 'l', "Box length", true, 0);
+  parser.add<double>("error", 'e', "error bound (for unif) or stddev (for gaussian)", true, 0);
+  parser.add<bool>("unif", 'u', "Is error uniform?", true, 0);
+  parser.add<uint32_t>("repeat", 'N', "# of repetitions", false, 1000000);
 
   parser.parse_check(argc, argv);
   double box_length = parser.get<double>("box_length");

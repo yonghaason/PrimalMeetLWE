@@ -17,7 +17,7 @@ ConstraintTest::ConstraintTest(
   }
 
   cout << "------- Main Logic (Constraint) Test -------" << endl;
-  cout << "- LWE dim n = " << n << endl;
+  cout << "- Dim n = " << n << endl;
   cout << "- # Sample m = " << m << endl;
   cout << "- Domain: Simulation of GSA from " << q << " to " << GSnorm[m-1] << endl;
   cout << "- Error distribution : ";
@@ -216,7 +216,7 @@ void ConstraintTest::gen_noisy_instance(
   }
 };
 
-void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound)
+void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound, uint32_t target_pair_num)
 {
   auto R = ambiguity(n, h, guess_weight);
   proj_dim = 1;
@@ -237,7 +237,7 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint
       cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
     }
 
-    auto inv = 1.0 / (p_adm * cur_p_adm / cur_ratio);
+    auto inv = (double) target_pair_num / (p_adm * cur_p_adm / cur_ratio);
     if (R < inv) {
       proj_dim -= 1;
       break;
@@ -249,13 +249,13 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint
     }
   }
 
-  cout << "**** Theoretically Computed Params ****"  << endl;
-  cout << "- # of reps (Ambiguity): " << R << endl;
-  cout << "- Projection dim: " << proj_dim << endl;
-  cout << "- p_admissible (log): " << p_adm << " (" << log2(p_adm) << ")" << endl;
-  cout << "- E(|L_0|) = " << R * p_adm
-        << " / E(|L_1|) = " << binom(n, guess_weight)*(1ull << guess_weight) << "/" << vol_ratio
-        << " = " << binom(n, guess_weight)*(1ull << guess_weight) / vol_ratio << endl;
+  cout << "**** Theorical Computations ****"  << endl;
+  cout << "- # of reps (Ambiguity R): " << R << endl;
+  cout << "- Projection dim (r): " << proj_dim << endl;
+  cout << "- p_rep (log): " << p_adm << " (" << log2(p_adm) << ")" << endl;
+  cout << "- # Pairs (R * p_rep) = " << R * p_adm << endl;
+        // << " / E(|L_1|) = " << binom(n, guess_weight)*(1ull << guess_weight) << "/" << vol_ratio
+        // << " = " << binom(n, guess_weight)*(1ull << guess_weight) / vol_ratio << endl;
   cout << endl;
 }
 
@@ -290,7 +290,7 @@ set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
       auto Ms1 = matmul(Mtrans, s1);
       auto Ms2 = subvec(Ms1, e);
       fmodvec(Ms1, GSnorm);
-      fmodvec(Ms2, GSnorm); // 중요: 이걸 하냐 마냐가 critical detail .. ? 
+      fmodvec(Ms2, GSnorm);
       if ((inf_norm(Ms1, m-proj_dim) <= constraint_bound) && (inf_norm(Ms2, m-proj_dim) <= constraint_bound)) {
         sol.insert(make_pair(s1, s2));
       }
@@ -322,22 +322,44 @@ set<pair<secret, secret>> ConstraintTest::check_near_collision(
   return sol;
 }
 
-NearCollisionTest::NearCollisionTest(uint32_t m, uint64_t q, double e, bool unif)
-  : m(m), e(e), unif(unif)
+NearCollisionTest::NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif, uint32_t lsh_dim, double lsh_length, uint32_t iter_mult)
+  : r(r), e(e), unif(unif), lsh_dim(lsh_dim), lsh_length(lsh_length), iter_mult(iter_mult)
 {
-  dom.resize(m);
-  for (size_t i = 0; i < m; i++) {
-    dom[i] = pow(q, (1.0 - (double) i/(2*m)));
+  dom.resize(r);
+  for (size_t i = 0; i < r; i++) {
+    dom[i] = pow(q, (1.0 - (double) i/(2*r)));
     // dom[i] = q;
   }
 
   cout << "------- LSH near-collision test -------" << endl;  
-  cout << "- Dimension m = " << m << endl;
-  cout << "- Domain: Simulation of GSA from " << q << " to " << dom[m-1] << endl;
+  cout << "- Dimension r = " << r << endl;
+  cout << "- Domain: Simulation of GSA from " << q << " to " << dom[r-1] << endl;
   cout << "- Near-collision distance : ";
   if (unif) cout << "Uniform over [-" << e << ", " << e << "]" << endl;
   else cout << "Gaussian of stddev = " << e << endl;
   cout << endl;
+  
+  box_num.resize(r);
+  lsh_lengths.resize(r);
+
+  double p_bad = 1;  
+
+  for (size_t i = 0; i < r; i++) {
+    if (dom[i] < lsh_length) box_num[i] = 1;
+    else box_num[i] = ceil(dom[i] / lsh_length);
+    lsh_lengths[i] = (double) dom[i] / box_num[i];
+    // p_bad /= box_num[i];
+  }
+  
+  for (size_t i = 0; i < lsh_dim; i++) {
+    if (box_num[i] > 1) {
+      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]);
+      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]);
+    }
+  }
+  
+  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << endl;
+
 }
 
 matrix NearCollisionTest::gen_instance(
@@ -348,7 +370,7 @@ matrix NearCollisionTest::gen_instance(
   random_device rd;
   mt19937 gen(rd());
   vector<uniform_real_distribution<double>> sampler;
-  for (size_t i = 0; i < m; i++) {
+  for (size_t i = 0; i < r; i++) {
     sampler.push_back(uniform_real_distribution<double>(0, dom[i]));
   }
   
@@ -356,9 +378,9 @@ matrix NearCollisionTest::gen_instance(
   uniform_real_distribution<double> unif_sampler(-e, e);
 
   for (size_t i = 0; i < near_collision_num; i++) {
-    vector<double> pair1(m);
-    vector<double> pair2(m);
-    for (size_t j = 0; j < m; j++) {
+    vector<double> pair1(r);
+    vector<double> pair2(r);
+    for (size_t j = 0; j < r; j++) {
       pair1[j] = sampler[j](gen);
       double error;
       error = unif? unif_sampler(gen): gaussian_sampler(gen);
@@ -372,8 +394,8 @@ matrix NearCollisionTest::gen_instance(
   }
 
   while (result.size() < output_size) {
-    vector<double> randvec(m);
-    for (size_t j = 0; j < m; j++) {
+    vector<double> randvec(r);
+    for (size_t j = 0; j < r; j++) {
       randvec[j] = sampler[j](gen);
     }
     result.push_back(randvec);
@@ -382,48 +404,24 @@ matrix NearCollisionTest::gen_instance(
   return result;
 }
 
-set<vector<double>> NearCollisionTest::lsh_based_search(
-  matrix& L, double lsh_length, size_t lsh_dim, uint64_t iter_multiple) 
+set<vector<double>> NearCollisionTest::lsh_based_search(matrix& L) 
 {
   set<vector<double>> sol;
-
-  vector<size_t> box_num(m);
-  vector<double> lsh_lengths(m);
-
-  double p_bad = 1;  
-
-  for (size_t i = 0; i < m; i++) {
-    if (dom[i] < lsh_length) box_num[i] = 1;
-    else box_num[i] = ceil(dom[i] / lsh_length);
-    lsh_lengths[i] = (double) dom[i] / box_num[i];
-    p_bad /= box_num[i];
-  }
-  
+ 
   random_device rd;
   mt19937 gen(rd());
 
-  double p_good = 1; 
-  
-  for (size_t i = 0; i < lsh_dim; i++) {
-    if (box_num[i] > 1) {
-      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]);
-      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]);
-    }
-  }
-
-  uint64_t iteration = ceil(iter_multiple / p_good);
+  uint64_t iteration = ceil(iter_mult / p_good);
   vector<uint64_t> iter_checks{0};
-  for (size_t i = 0; i < iter_multiple; i++) {
+  for (size_t i = 0; i < iter_mult; i++) {
     iter_checks.push_back(ceil((i+1) / p_good));
   }
 
-  double near_collision_condition = unif? e: 6*e;
-  
-  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << ", p_bad = " << p_bad << endl;
+  double near_collision_condition = unif? e: 6*e;  
 
   size_t hash_collision_num = 0;
 
-  for (size_t cp = 0; cp < iter_multiple; cp++) {
+  for (size_t cp = 0; cp < iter_mult; cp++) {
     for (size_t i = iter_checks[cp]; i < iter_checks[cp+1]; i++) {
       // Pick torus-LSH by starting points
       vector<double> lsh_starts(lsh_dim);
@@ -463,11 +461,11 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
         }
       }
     }
-    cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
+    // cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
   }
 
-  cout << "# Total hash collision = " << hash_collision_num << endl;
-  cout << "(Expected 1.5 * |L|^2 * p_bad / p_good = " << 1.5 * L.size() * p_bad / p_good << endl;
+  // cout << "# Total hash collision = " << hash_collision_num << endl;
+  // cout << "(Expected 1.5 * |L|^2 * p_bad / p_good = " << 1.5 * L.size() * p_bad / p_good << endl;
 
   return sol;
 };

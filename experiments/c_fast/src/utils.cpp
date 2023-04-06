@@ -1,17 +1,17 @@
 #include "utils.h"
 #include <iostream>
 
-double prob_admissible_gaussian(double stddev, double b)
+double prob_admissible_gaussian(double stddev, double ell)
 {
-  auto x = b/(sqrt(2)*stddev);
+  auto x = ell/(sqrt(2)*stddev);
   auto p = erf(x) + (exp(-pow(x, 2)) - 1)/(x * sqrt(M_PI));
   return p;
 }
 
-double prob_admissible_uniform(double e, double b)
+double prob_admissible_uniform(double b, double ell)
 { 
-  if (e <= b) return 1.0 - e/(2*b);
-  else return b/(2*e);
+  if (b <= ell) return 1.0 - b/(2*ell);
+  else return ell/(2*b);
 }
 
 bool weight_ternary_check(secret& s, uint32_t weight)

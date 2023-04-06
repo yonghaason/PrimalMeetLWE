@@ -2,45 +2,7 @@ from utils import *
 from functools import partial
 import copy
 
-"""
-
-Primal Hybrid Estimator
-
-* Covers some hybrid attacks of (primal) lattice reduction and combinatorial approach, where the combinatorial approach is represented by "level" as folows:
-- lv 0: Primal + Exhaustive search (folklore)
-- lv 1: Primal + MitM [Howgrave-Graham, C07], but with our optimization (See Sec 6.3)
-- lv >= 2: Primal + Meet-LWE [May, C21] = Ours
-
-* DON'T cover the non-hybrid (pure lattice-based) attack [AGPW17], which is based on another clever idea that is incompatible with hybrid strategy.
-
-* How to use?
-In 'python' shell (NOT 'sage' shell!):
-> from estimate import *
-> # param = [(n), (q), (error_type), (error_param), (weight_param), (m)] 
-> # primal_may(param, (lv))
-> param = [2**15, 2**768, 'gaussian', 3.19, 192, 2**15]
-> primal_may(param, lv=2)
-
-- It takes LONG LONG time (over several hours!) for high levels, or large LWE parameters. 
-- If the reviewer is curious about the detailed parameters,
-we recommend to see the text files in `logs' directory.
-- Checked with python3.8
-
-* About the consistency with `lattice-estimator:
-Our level-0 attack strategy is exactly the same with `primal_hybrid' with options `mitm=False, babai=True' in lattice-estimator.
-We observe that both scripts output similar numbers for this strategy.
-Meanwhile, our level-1 attack strategy is almost the same as the primal hybrid-MitM attack [HG07], with a difference in the dimension where babai NP algorithm is called.
-The hybrid-MitM attack is also covered by 'primal_hybrid' with options 'mitm=True, babai=True' in 'lattice-estimator', but we found that the computation is over-simplified from the original description in [HG07].
-We believe our script more accurately computes the attack complexity.
-This results in quite different estimation of this attack for PQC parameters.
-However, it has no actual impact on the current parameter selections
-since resulting numbers are non-competitive compared to other lattice attacks.
-For FHE parameters, two estimations are quite similar
-and there is no notable problem from lattice-estimator's over-simplified estimation.
-
-"""
-
-def primal_may(param, lv, is_secret_balanced = False, filename=False):
+def primal_may(param, lv, is_secret_balanced = False, filename=False, param_specified = {}):
     
     if filename is not False:
         f = open(filename, 'a')
@@ -77,35 +39,30 @@ def primal_may(param, lv, is_secret_balanced = False, filename=False):
         print("(The input uniform error distribution is considered as a gaussian with the same variance)")
     print("----------------------")
 
-    return primal_may_inner(n, q, stddev, is_secret_balanced, w, m, lv=lv, filename=filename)
+    return primal_may_inner(n, q, stddev, is_secret_balanced, w, m, lv=lv, param_specified = param_specified)
 
-def primal_may_inner(n, q, stddev, is_sec_bal, w, m, lv, filename=False):
-
-    if filename is not False:
-        f = open(filename, 'a')
-        sys.stdout = f
+def primal_may_inner(n, q, stddev, is_sec_bal, w, m, lv, param_specified):
 
     nu = stddev / float(sqrt(w / n))
     if is_sec_bal:
         nu = stddev / float(sqrt(2*w / n))
     func = partial(cost_zeta, n=n, q=q, stddev=stddev, 
-                    is_sec_bal=is_sec_bal, w=w, m=m, nu=nu, lv=lv)
-    best = my_binary_search(0, n, func, cur_depth = 0, max_depth = 6)
+                    is_sec_bal=is_sec_bal, w=w, m=m, nu=nu, lv=lv, 
+                    param_specified = param_specified)
+    best = None
+    if 'zeta' in param_specified:
+        zeta = param_specified['zeta']
+        best = my_binary_search(zeta, zeta, func, cur_depth = 0, max_depth = 6)
+    else:
+        best = my_binary_search(0, n, func, cur_depth = 0, max_depth = 6)
     
     print("----------------------")
 
     prettyprint(best)
 
-    if filename is not False:
-        f.close()
-    else:
-        return best
+    return best
 
-def cost_zeta(zeta, n, q, stddev, is_sec_bal, w, m, nu, lv, filename = False):
-
-    if filename is not False:
-        f = open(filename, 'a')
-        sys.stdout = f
+def cost_zeta(zeta, n, q, stddev, is_sec_bal, w, m, nu, lv, param_specified):
 
     m_ = m + n + 1 - zeta
     d1 = n + 1 - zeta
@@ -117,18 +74,19 @@ def cost_zeta(zeta, n, q, stddev, is_sec_bal, w, m, nu, lv, filename = False):
 
     # Find the best submatrix size d < m_
     func = partial(cost_d, zeta=zeta, n=n, q=q, stddev=stddev, 
-                    is_sec_bal=is_sec_bal, w=w, nu=nu, lv=lv, probs_hw = probs_hw)
-    best = my_binary_search(d1 + 1, m_, func, cur_depth = 0, max_depth = 5)
+                    is_sec_bal=is_sec_bal, w=w, nu=nu, lv=lv, probs_hw = probs_hw, param_specified = param_specified)
+    if 'd' in param_specified:
+        d = param_specified['d']
+        best = my_binary_search(d, d, func, cur_depth = 0, max_depth = 6)
+    else:
+        best = my_binary_search(d1 + 1, m_, func, cur_depth = 0, max_depth = 5)
     
     line = ' └──── Best: %f' % best['cost']
     print(line)
 
-    if filename is not False:
-        f.close()
-
     return best
 
-def cost_d(d, zeta, n, q, stddev, is_sec_bal, w, nu, lv, probs_hw = []):
+def cost_d(d, zeta, n, q, stddev, is_sec_bal, w, nu, lv, param_specified, probs_hw = []):
 
     if d < 40:
         return {'cost': np.inf}
@@ -137,13 +95,17 @@ def cost_d(d, zeta, n, q, stddev, is_sec_bal, w, nu, lv, probs_hw = []):
 
     # Find the best blocksize beta
     func = partial(cost_beta, zeta=zeta, n=n, q=q, d=d, stddev=stddev, 
-                    is_sec_bal=is_sec_bal, w=w, nu=nu, lv=lv, probs_hw = probs_hw)
-    best = my_binary_search(40, beta_max, func, cur_depth = 0, max_depth = 4)
-
+                    is_sec_bal=is_sec_bal, w=w, nu=nu, lv=lv, probs_hw = probs_hw, param_specified = param_specified)
+    if 'beta' in param_specified:
+        beta = param_specified['beta']
+        best = my_binary_search(beta, beta, func, cur_depth = 0, max_depth = 4)
+    else:
+        best = my_binary_search(40, beta_max, func, cur_depth = 0, max_depth = 4)
+    
     print(' │ d = %d:' % d, best['cost'])
     return best
 
-def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, probs_hw = [], HG=False):
+def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, param_specified, probs_hw = []):
 
     log_lat = log_BKZ_cost(d, beta)
     GSnorm = GSA(d, q, d,  n + 1 - zeta, beta, nu)
@@ -186,6 +148,8 @@ def cost_beta(beta, zeta, n, q, d, stddev, is_sec_bal, w, nu, lv, probs_hw = [],
     pr_hw = 0.0
     w_g_range = range(((w_g_min+1)//2)*2, (w_g_max//2)*2, 2) if (lv >= 1) \
                 else range(w_g_min, w_g_max)
+    if 'w_g' in param_specified:
+        w_g_range = range(param_specified['w_g'], param_specified['w_g'])
 
     for w_g in w_g_range:
         if w_g == 0:
@@ -226,18 +190,18 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
     proj_dim, w, is_error_unif, error_param, 
     lsh_length, last_lv, current_guess, abort_bound = np.inf):
     
-    skip = ' ' * lv
     d = len(GSnorm)
     cur_best = copy.deepcopy(current_guess)
-    cur_best['cost'] = np.inf
-
+    # Set upper bound by brute-force search of candidates
+    cur_best['cost'] = Log2(num_ternary_secret(zeta, w, is_sec_bal) * babai_cost(proj_dim))
+    
     if lv == last_lv:
         p_adm = p_admissible(GSnorm, range(d-proj_dim, d), is_error_unif, error_param)
         
-        for w_split in range(w//2, w + 1):
+        for w_split in range(w//2, w):
             running_stat = copy.deepcopy(current_guess)
             R = ambiguity(zeta, w, w_split, is_sec_bal)
-            if R * p_adm < 10.0:
+            if R * p_adm < 1.0:
                 continue
             S = num_ternary_secret(zeta, w_split, is_sec_bal)
             L = S / sqrt(R*p_adm)
@@ -290,7 +254,7 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
         w_start = w//2
         if w_start % 2 == 1: w_start += 1
         
-        for w_split in range(w_start, w + 1, 2):
+        for w_split in range(w_start, w, 2):
             running_stat = copy.deepcopy(current_guess)
             R = ambiguity(zeta, w, w_split, is_sec_bal)
             next_proj_dim, p_rep, vol_ratio = \
@@ -350,7 +314,7 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
                 cur_best = copy.deepcopy(comp)
 
         if cur_best['cost'] == np.inf:
-            # Fail to reduce to higher level, so change the top level to the current level 
+            # Fail to reduce to higher level, so change the top level to the current level
             cur_best = meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
                 proj_dim, w, True, constraint_bound, 2*constraint_bound, 
                 lv, copy.deepcopy(current_guess), abort_bound)
@@ -387,7 +351,7 @@ def constraint_area(R, error_param, constraint_bound, GSnorm, is_error_unif, pro
         else:
             cur_p_adm = prob_admissible_gaussian(cur_axis_length, error_param)
 
-        inv = 10.0 / (p_adm * cur_p_adm / cur_ratio)
+        inv = 1.0 / (p_adm * cur_p_adm / cur_ratio)
         if R < inv:
             proj_dim -= 1
             break

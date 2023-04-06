@@ -15,10 +15,10 @@ using matrix = vector<vector<double>>;
 
 uint64_t ambiguity(uint32_t n, uint32_t h, uint32_t w);
 
-// Prob[x + e in [0, b]], 
-// where x <-[0, b] and e <- gaussian of stddev, or unif[-e, e]
-double prob_admissible_gaussian(double stddev, double b);
-double prob_admissible_uniform(double e, double b);
+// Prob[x + e in [0, ell]], 
+// where x <-[0, ell] and e <- gaussian of stddev, or unif[-b, b]
+double prob_admissible_gaussian(double stddev, double ell);
+double prob_admissible_uniform(double b, double ell);
 
 bool weight_ternary_check(secret& s, uint32_t weight);
 

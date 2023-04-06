@@ -193,9 +193,9 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
     d = len(GSnorm)
     cur_best = copy.deepcopy(current_guess)
     # Set upper bound by brute-force search of candidates
-    cur_best['cost'] = Log2(num_ternary_secret(zeta, w, is_sec_bal) * babai_cost(proj_dim))
     
     if lv == last_lv:
+        cur_best['cost'] = Log2(num_ternary_secret(zeta, w, is_sec_bal) * babai_cost(proj_dim))
         p_adm = p_admissible(GSnorm, range(d-proj_dim, d), is_error_unif, error_param)
         
         for w_split in range(w//2, w):
@@ -250,6 +250,7 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
                 cur_best = copy.deepcopy(running_stat)
         
     else:
+        cur_best['cost'] = np.inf
         constraint_bound = error_param # One can further fine-tune this ...
         w_start = w//2
         if w_start % 2 == 1: w_start += 1
@@ -314,7 +315,7 @@ def meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
                 cur_best = copy.deepcopy(comp)
 
         if cur_best['cost'] == np.inf:
-            # Fail to reduce to higher level, so change the top level to the current level
+            # Fail to reduce to higher level, so set the current level as the top level
             cur_best = meet_LWE_cost(lv, GSnorm, is_sec_bal, zeta,
                 proj_dim, w, True, constraint_bound, 2*constraint_bound, 
                 lv, copy.deepcopy(current_guess), abort_bound)

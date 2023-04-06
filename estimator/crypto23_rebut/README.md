@@ -18,7 +18,7 @@ In 'python (checked with 3.8)' shell (NOT 'sage' shell!):
 >>> # param = [(n), (q), (error_type), (error_param), (weight_param), (m)]
 >>> # primal_may(param, (lv))
 >>> param = [2**15, 2**768, 'gaussian', 3.19, 192, 2**15]
->>> primal_may(param, lv=2)
+>>> _ = primal_may(param, lv=2)
 ```
 
 > It may takes LONG time (can be several hours!) for high levels, or large LWE parameters. So if the reviewer is curious about the detailed parameters, we recommend to see the text files in `logs' directory.

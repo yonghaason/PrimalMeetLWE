@@ -12,8 +12,7 @@ make
 This will make executables `adm_test`, `cons_test`, `nc_test` in the same directory.
 
 ### Experiment 1. Admissible Probability
-
-A simple test for admissible probability.
+This experiment is a simple test for admissible probability. It confirms the exact formula of the admissible probability in the Supplementary Materials.
 ```bash
 ./adm_test
 ```
@@ -32,7 +31,7 @@ This experiment validates this claim (and hence also indirectly validates underl
 ```
 will give how to insert arguments, for example
 ```bash
-./cons_test -d 30 -h 10 -w 6 -u 0 -e 3 -l 10 -t 10
+./cons_test -d 30 -h 6 -w 4 -u 0 -e 3 -l 10 -t 10
 ```
 
 ### Experiment 3. LSH-based Near-collision Finding

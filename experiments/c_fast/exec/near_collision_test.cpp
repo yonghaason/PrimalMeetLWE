@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   
   auto L = nc_test.gen_instance(near_collision_num, N);
   auto sol = nc_test.lsh_based_search(L);
-  double avg_sol = sol.size() / near_collision_num;
+  double avg_sol = sol.size();
   
   for (size_t i = 1; i < repetition; i++) {
     auto L = nc_test.gen_instance(near_collision_num, N);

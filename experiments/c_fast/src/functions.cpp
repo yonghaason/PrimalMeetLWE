@@ -17,7 +17,7 @@ ConstraintTest::ConstraintTest(
   }
 
   cout << "------- Main Logic (Constraint) Test -------" << endl;
-  cout << "- LWE dim n = " << n << endl;
+  cout << "- Dim n = " << n << endl;
   cout << "- # Sample m = " << m << endl;
   cout << "- Domain: Simulation of GSA from " << q << " to " << GSnorm[m-1] << endl;
   cout << "- Error distribution : ";
@@ -98,6 +98,59 @@ vector<secret> ConstraintTest::enumerate_secrets(uint32_t d, uint32_t w)
   }
 }
 
+uint32_t ConstraintTest::new_check_near_collision(
+  matrix& M, secret& s, vector<double>& e, 
+  uint32_t guess_weight, double constraint_bound) 
+{
+  matrix Mtrans = transpose(M);
+  uint32_t count = 0;
+  vector<double> Ms1(m);
+  vector<int32_t> nonzeroidx(guess_weight);
+  vector<int32_t> sign(guess_weight);
+  recur_check(count, Mtrans, e, s, constraint_bound, 
+              nonzeroidx, sign, Ms1, 0, n-1, 0, guess_weight);
+  return count;
+}
+
+void ConstraintTest::recur_check(
+  uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
+  vector<int32_t>& nonzeroidx, vector<int32_t>& sign, vector<double>& Ms1, 
+  uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k)
+{
+  if (cur_hw == k) {
+    secret s1(n);
+    for (size_t i = 0; i < nonzeroidx.size(); i++) {
+      if (sign[i] == 1) s1[nonzeroidx[i]] = 1;
+      else s1[nonzeroidx[i]] = -1;
+    }
+    auto s2 = sub(s1, s);
+    if (weight_ternary_check(s2, k)) {
+      fmodvec(Ms1, GSnorm);
+      if (inf_norm(Ms1, m-proj_dim) <= constraint_bound) {
+        auto Ms2 = subvec(Ms1, e);
+        fmodvec(Ms2, GSnorm);
+        if (inf_norm(Ms2, m-proj_dim) <= constraint_bound) {
+          count++;
+        }
+      }
+    }
+  }
+  else {
+    vector<double> Ms1_next(m);
+    for (int i = start; i <= end && end - i + 1 >= k - cur_hw; i++) {
+        nonzeroidx[cur_hw] = i;
+        sign[cur_hw] = 1;
+        Ms1_next = addvec(Ms1, Mtrans[i]);
+        recur_check(count, Mtrans, e, s, constraint_bound,
+                    nonzeroidx, sign, Ms1_next, i+1, end, cur_hw+1, k);
+        sign[cur_hw] = -1;  
+        Ms1_next = subvec(Ms1, Mtrans[i]);
+        recur_check(count, Mtrans, e, s, constraint_bound,
+                    nonzeroidx, sign, Ms1_next, i+1, end, cur_hw+1, k);
+    }
+  }
+}
+
 void ConstraintTest::gen_noisy_instance(
   matrix& M, vector<int64_t>& s, vector<double>& error)
 {
@@ -163,7 +216,7 @@ void ConstraintTest::gen_noisy_instance(
   }
 };
 
-void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length)
+void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound, uint32_t target_pair_num)
 {
   auto R = ambiguity(n, h, guess_weight);
   proj_dim = 1;
@@ -175,16 +228,16 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length
     if (proj_dim == m) break;
     
     double cur_ratio = 1;
-    double cur_axis_length = (2*box_length < GSnorm[m-proj_dim]) ?
-                              2*box_length : GSnorm[m-proj_dim];
+    double cur_axis_length = (2*constraint_bound < GSnorm[m-proj_dim]) ?
+                              2*constraint_bound : GSnorm[m-proj_dim];
     double cur_p_adm = unif? 
-                      prob_admissible_uniform(e, cur_axis_length/2): 
-                      prob_admissible_gaussian(e, cur_axis_length/2);
-    if (2*box_length < GSnorm[m-proj_dim]) {
-      cur_ratio = GSnorm[m-proj_dim] / (2*box_length);
+                      prob_admissible_uniform(e, cur_axis_length): 
+                      prob_admissible_gaussian(e, cur_axis_length);
+    if (2*constraint_bound < GSnorm[m-proj_dim]) {
+      cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
     }
 
-    auto inv = 1.0 / (p_adm * cur_p_adm / cur_ratio);
+    auto inv = (double) target_pair_num / (p_adm * cur_p_adm / cur_ratio);
     if (R < inv) {
       proj_dim -= 1;
       break;
@@ -196,18 +249,18 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double box_length
     }
   }
 
-  cout << "**** Theoretically Computed Params ****"  << endl;
-  cout << "- # of reps (Ambiguity): " << R << endl;
-  cout << "- Projection dim: " << proj_dim << endl;
-  cout << "- p_admissible (log): " << p_adm << " (" << log2(p_adm) << ")" << endl;
-  cout << "- E(|L_0|) = " << R * p_adm
-        << " / E(|L_1|) = " << binom(n, guess_weight)*(1ull << guess_weight) << "/" << vol_ratio
-        << " = " << binom(n, guess_weight)*(1ull << guess_weight) / vol_ratio << endl;
+  cout << "**** Theorical Computations ****"  << endl;
+  cout << "- # of reps (Ambiguity R): " << R << endl;
+  cout << "- Projection dim (r): " << proj_dim << endl;
+  cout << "- p_rep (log): " << p_adm << " (" << log2(p_adm) << ")" << endl;
+  cout << "- # Pairs (R * p_rep) = " << R * p_adm << endl;
+        // << " / E(|L_1|) = " << binom(n, guess_weight)*(1ull << guess_weight) << "/" << vol_ratio
+        // << " = " << binom(n, guess_weight)*(1ull << guess_weight) / vol_ratio << endl;
   cout << endl;
 }
 
 vector<pair<secret, vector<double>>> ConstraintTest::build_list(
-  matrix& M, uint32_t guess_weight, double box_length)
+  matrix& M, uint32_t guess_weight, double constraint_bound)
 {
   // S = {(v, Mv): HW(v) = w}
   matrix Mtrans = transpose(M);
@@ -219,7 +272,7 @@ vector<pair<secret, vector<double>>> ConstraintTest::build_list(
     auto Mv = p.second;
     fmodvec(Mv, GSnorm);
 
-    if (inf_norm(Mv, m-proj_dim) <= box_length)
+    if (inf_norm(Mv, m-proj_dim) <= constraint_bound)
       L.push_back(make_pair(v, Mv));
   }
   return L;
@@ -227,7 +280,7 @@ vector<pair<secret, vector<double>>> ConstraintTest::build_list(
 
 set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
   matrix& M, secret& s, vector<double>& e, 
-  vector<secret>& partial_list, uint32_t guess_weight, double box_length) 
+  vector<secret>& partial_list, uint32_t guess_weight, double constraint_bound) 
 {
   matrix Mtrans = transpose(M);
   set<pair<secret, secret>> sol;
@@ -237,8 +290,8 @@ set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
       auto Ms1 = matmul(Mtrans, s1);
       auto Ms2 = subvec(Ms1, e);
       fmodvec(Ms1, GSnorm);
-      fmodvec(Ms2, GSnorm); // 중요: 이걸 하냐 마냐가 critical detail .. ? 
-      if ((inf_norm(Ms1, m-proj_dim) <= box_length) && (inf_norm(Ms2, m-proj_dim) <= box_length)) {
+      fmodvec(Ms2, GSnorm);
+      if ((inf_norm(Ms1, m-proj_dim) <= constraint_bound) && (inf_norm(Ms2, m-proj_dim) <= constraint_bound)) {
         sol.insert(make_pair(s1, s2));
       }
     }
@@ -269,119 +322,44 @@ set<pair<secret, secret>> ConstraintTest::check_near_collision(
   return sol;
 }
 
-// set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
-//   vector<pair<secret, vector<double>>>& L, double e, vector<double>& GSnorm, uint32_t h, 
-//   vector<size_t>& box_num, vector<double>& lsh_lengths, vector<double>& lsh_dom, 
-//   uint64_t iteration_multiple, bool unif)
-// {
-//   set<pair<vector<int64_t>, vector<int64_t>>> sol;
-
-//   random_device rd;
-//   mt19937 gen(rd());
-
-//   auto n = L[0].first.size();
-//   auto m = L[0].second.size();
-
-//   double p_good = 1, p_bad = 1;
-//   double k = 0;
-
-//   while (true) {
-//     double cur_p_good = 1;
-//     double cur_p_bad = lsh_lengths[k] / lsh_dom[k];
-//     if (box_num[k] > 1) {
-//       if (unif) cur_p_good = prob_admissible_uniform(e, lsh_lengths[k]); 
-//       else cur_p_good = prob_admissible_gaussian(e, lsh_lengths[k]);
-//     }
-    
-//     if (L.size() * p_bad * cur_p_bad < 1.0) break;
-
-//     else {
-//       p_good *= cur_p_good;
-//       p_bad *= cur_p_bad;
-//       if (k == m) break;
-//       k += 1;
-//     }
-//   }
-
-//   uint64_t iteration = ceil(iteration_multiple / p_good);
-//   vector<uint64_t> iter_checks{0};
-//   for (size_t i = 0; i < iteration_multiple; i++) {
-//     iter_checks.push_back(ceil((i+1) / p_good));
-//   }
-  
-//   auto collision_condition = unif? e: 6*e;
-
-//   cout << " (LSH dim = " << k << ", p_good = " << p_good << ", p_bad = " << p_bad << ")" << endl;
-
-//   for (size_t cp = 0; cp < iteration_multiple; cp++) {
-//     for (size_t iter = iter_checks[cp]; iter < iter_checks[cp+1]; iter++) {    
-//       // Pick torus-LSH by starting points
-//       vector<double> lsh_starts(k);
-//       for (size_t i = 0; i < k; i++) {
-//         uniform_real_distribution<double> lsh_random_starts(0, lsh_lengths[i]);
-//         lsh_starts[i] = lsh_random_starts(gen);
-//       }
-
-//       // Fill LSH table
-//       map<vector<uint32_t>, vector<pair<secret, vector<double>>>> hash_table;
-//       for (auto& p: L) {
-//         auto Mv = p.second;
-//         std::vector<uint32_t> address(k);
-//         vector<pair<secret, vector<double>>> bin;
-//         for (size_t i = 0; i < k; i++) {
-//           int64_t a = floor((Mv[i] - lsh_starts[i]) / lsh_lengths[i]);
-//           address[i] = a % box_num[i];
-//         }
-//         if (hash_table.count(address) > 0) {
-//           hash_table[address].push_back(p);
-//         }
-//         else {
-//           hash_table[address] = vector<pair<secret, vector<double>>>{p};
-//         }
-//       }
-        
-//       for (auto &iterator: hash_table) {
-//         auto bin = iterator.second;
-//         auto N = bin.size();
-//         auto n = bin[0].first.size();
-//         for (size_t i = 0; i < N; i++) {
-//           for (size_t j = 0; j < N; j++) {
-//             auto s_ = subvec(bin[i].first, bin[j].first);
-//             if (hamming_weight(s_) != h)
-//               continue;
-//             if (s_[n-1] == 1)
-//               continue;
-            
-//             auto Ms_ = subvec(bin[i].second, bin[j].second);
-//             fmodvec(Ms_, GSnorm);
-
-//             if (inf_norm(Ms_) <= collision_condition)
-//               sol.insert(make_pair(bin[i].first, bin[j].first));
-//           }
-//         }
-//       }
-//     }
-//     cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
-//   }
-  
-//   return sol;
-// };
-
-NearCollisionTest::NearCollisionTest(uint32_t m, uint64_t q, double e, bool unif)
-  : m(m), e(e), unif(unif)
+NearCollisionTest::NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif, uint32_t lsh_dim, double lsh_length, uint32_t iter_mult)
+  : r(r), e(e), unif(unif), lsh_dim(lsh_dim), lsh_length(lsh_length), iter_mult(iter_mult)
 {
-  dom.resize(m);
-  for (size_t i = 0; i < m; i++) {
-    dom[i] = pow(q, (1.0 - (double) i/(2*m)));
+  dom.resize(r);
+  for (size_t i = 0; i < r; i++) {
+    dom[i] = pow(q, (1.0 - (double) i/(2*r)));
+    // dom[i] = q;
   }
 
   cout << "------- LSH near-collision test -------" << endl;  
-  cout << "- Dimension m = " << m << endl;
-  cout << "- Domain: Simulation of GSA from " << q << " to " << dom[m-1] << endl;
+  cout << "- Dimension r = " << r << endl;
+  cout << "- Domain: Simulation of GSA from " << q << " to " << dom[r-1] << endl;
   cout << "- Near-collision distance : ";
   if (unif) cout << "Uniform over [-" << e << ", " << e << "]" << endl;
   else cout << "Gaussian of stddev = " << e << endl;
   cout << endl;
+  
+  box_num.resize(r);
+  lsh_lengths.resize(r);
+
+  double p_bad = 1;  
+
+  for (size_t i = 0; i < r; i++) {
+    if (dom[i] < lsh_length) box_num[i] = 1;
+    else box_num[i] = ceil(dom[i] / lsh_length);
+    lsh_lengths[i] = (double) dom[i] / box_num[i];
+    // p_bad /= box_num[i];
+  }
+  
+  for (size_t i = 0; i < lsh_dim; i++) {
+    if (box_num[i] > 1) {
+      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]);
+      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]);
+    }
+  }
+  
+  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << endl;
+
 }
 
 matrix NearCollisionTest::gen_instance(
@@ -392,7 +370,7 @@ matrix NearCollisionTest::gen_instance(
   random_device rd;
   mt19937 gen(rd());
   vector<uniform_real_distribution<double>> sampler;
-  for (size_t i = 0; i < m; i++) {
+  for (size_t i = 0; i < r; i++) {
     sampler.push_back(uniform_real_distribution<double>(0, dom[i]));
   }
   
@@ -400,9 +378,9 @@ matrix NearCollisionTest::gen_instance(
   uniform_real_distribution<double> unif_sampler(-e, e);
 
   for (size_t i = 0; i < near_collision_num; i++) {
-    vector<double> pair1(m);
-    vector<double> pair2(m);
-    for (size_t j = 0; j < m; j++) {
+    vector<double> pair1(r);
+    vector<double> pair2(r);
+    for (size_t j = 0; j < r; j++) {
       pair1[j] = sampler[j](gen);
       double error;
       error = unif? unif_sampler(gen): gaussian_sampler(gen);
@@ -416,8 +394,8 @@ matrix NearCollisionTest::gen_instance(
   }
 
   while (result.size() < output_size) {
-    vector<double> randvec(m);
-    for (size_t j = 0; j < m; j++) {
+    vector<double> randvec(r);
+    for (size_t j = 0; j < r; j++) {
       randvec[j] = sampler[j](gen);
     }
     result.push_back(randvec);
@@ -426,43 +404,24 @@ matrix NearCollisionTest::gen_instance(
   return result;
 }
 
-set<vector<double>> NearCollisionTest::lsh_based_search(
-  matrix& L, double lsh_length, size_t lsh_dim, uint64_t iter_multiple) 
+set<vector<double>> NearCollisionTest::lsh_based_search(matrix& L) 
 {
   set<vector<double>> sol;
-
-  vector<size_t> box_num(m);
-  vector<double> lsh_lengths(m);
-
-    for (size_t i = 0; i < m; i++) {
-    if (dom[i] < lsh_length) box_num[i] = 1;
-    else box_num[i] = ceil(dom[i] / lsh_length);
-    lsh_lengths[i] = (double) dom[i] / box_num[i];
-  }
-  
+ 
   random_device rd;
   mt19937 gen(rd());
 
-  double p_good = 1; // p_bad = 1;
-  
-  for (size_t i = 0; i < lsh_dim; i++) {
-    if (box_num[i] > 1) {
-      if (unif) p_good *= prob_admissible_uniform(e, lsh_lengths[i]/2);
-      else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]/2);
-    }
-  }
-
-  uint64_t iteration = ceil(iter_multiple / p_good);
+  uint64_t iteration = ceil(iter_mult / p_good);
   vector<uint64_t> iter_checks{0};
-  for (size_t i = 0; i < iter_multiple; i++) {
+  for (size_t i = 0; i < iter_mult; i++) {
     iter_checks.push_back(ceil((i+1) / p_good));
   }
 
-  double near_collision_condition = unif? e: 6*e;
-  
-  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << endl;
+  double near_collision_condition = unif? e: 6*e;  
 
-  for (size_t cp = 0; cp < iter_multiple; cp++) {
+  size_t hash_collision_num = 0;
+
+  for (size_t cp = 0; cp < iter_mult; cp++) {
     for (size_t i = iter_checks[cp]; i < iter_checks[cp+1]; i++) {
       // Pick torus-LSH by starting points
       vector<double> lsh_starts(lsh_dim);
@@ -493,20 +452,20 @@ set<vector<double>> NearCollisionTest::lsh_based_search(
         auto N = bin.size();
         for (size_t i = 0; i < N; i++) {
           for (size_t j = i+1; j < N; j++) {
-            auto check = subvec(bin[i], bin[j]);
+            auto check = subvec(bin[i], bin[j]);            
             if (inf_norm(check) <= near_collision_condition) {
-              // auto this_pair = make_pair(bin[i], bin[j]);
-              // if (find(good_pairs.begin(), good_pairs.end(), this_pair) != good_pairs.end()) {
               sol.insert(check);
-              // }
+              hash_collision_num++;
             } 
-              
           }
         }
       }
     }
-    cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
+    // cout << "   " << iter_checks[cp+1] << " LSH iterations (" << cp+1 << "-multiple): " << sol.size() << " pairs " << endl;
   }
-  
+
+  // cout << "# Total hash collision = " << hash_collision_num << endl;
+  // cout << "(Expected 1.5 * |L|^2 * p_bad / p_good = " << 1.5 * L.size() * p_bad / p_good << endl;
+
   return sol;
 };

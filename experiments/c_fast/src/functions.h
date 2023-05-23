@@ -11,20 +11,26 @@ using namespace std;
 
 class NearCollisionTest {
 public:  
-  NearCollisionTest(uint32_t m, uint64_t q, double e, bool unif);
+  NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif, uint32_t lsh_dim, double lsh_length, uint32_t iter_mult);
 
   vector<vector<double>> gen_instance(
     size_t near_collision_num, size_t output_size = 0);
 
   set<vector<double>> lsh_based_search(
-    vector<vector<double>>& L, double lsh_length, size_t lsh_dim, uint64_t iter_multiple);
+    vector<vector<double>>& L);
 
   domain dom;
 
 private:
-  uint32_t m; // dimension
+  uint32_t r; // dimension
   double e; // stddev if gaussian, error bound if unif
   bool unif; // error is unif or gaussian
+  uint32_t lsh_dim;
+  double lsh_length;
+  uint32_t iter_mult;
+  vector<size_t> box_num;
+  vector<double> lsh_lengths;
+  double p_good = 1;
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -41,8 +47,9 @@ public:
     matrix& M, vector<int64_t>& s, vector<double>& error);
 
   /* Output the largest projection dimension r of given domain D,
-  such that "ambiguity * p_adm > 1" where "p_adm = Pr[x and x + e both in pi_r(D)]" */
-  void set_constraint_dim(uint32_t guess_weight, double box_length);
+  such that "ambiguity * p_adm > target_pair_num" 
+  where "p_adm = Pr[x and x + e both in pi_r(D)]" */
+  void set_constraint_dim(uint32_t guess_weight, double box_length, uint32_t target_pair_num = 1);
 
   /* Output {(s, Ms): HW(s) = w} */
   vector<pair<secret, vector<double>>> sparse_secret_list(
@@ -61,12 +68,15 @@ public:
   set<pair<secret, secret>> fast_check_near_collision(
     matrix& M, secret& s, vector<double>& e, 
     vector<secret>& partial_list, uint32_t guess_weight, double box_length);
-    
-  // /* Torus LSH-based search method */
-  // set<pair<vector<int64_t>, vector<int64_t>>> near_collision_lsh(
-  //   my_list& L, double e, vector<double>& GSnorm, uint32_t h, 
-  //   vector<size_t>& box_num, vector<double>& lsh_lengths, vector<double>& lsh_domain, 
-  //   uint64_t iteration_multiple, bool unif);
+
+  uint32_t new_check_near_collision(
+    matrix& M, secret& s, vector<double>& e, 
+    uint32_t guess_weight, double constraint_bound);   
+
+  void recur_check(
+    uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
+    vector<int32_t>& nonzeroidx, vector<int32_t>& sign, vector<double>& Ms1, // vector<size_t>& arr, vector<size_t>& idx, 
+    uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k);
 
   uint64_t proj_dim;
   uint64_t full_list_size;

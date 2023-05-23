@@ -6,14 +6,30 @@
 
 using namespace std;
 
-ConstraintTest::ConstraintTest(
+UniformTest::UniformTest(
   uint32_t n, double e, uint64_t q,
   uint32_t h, uint32_t m, bool unif)
   : n(n), e(e), h(h), m(m), unif(unif)
 {
+  random_device rd;
+  mt19937 gen(rd());
+  vector<uniform_real_distribution<double>> coord_sampler(m);
+
   GSnorm.resize(m);
   for (size_t i = 0; i < m; i++) {
     GSnorm[i] = pow(q, (1.0 - (double) i/(2*m)));
+  }
+
+  B.resize(m);
+  for (size_t i = 0; i < m; i++) {
+    B[i].resize(m);
+  }
+  for (size_t j = 0; j < m; j++) {
+    B[j][j] = GSnorm[j];
+    coord_sampler[j] = uniform_real_distribution<double>(-GSnorm[j]/2, GSnorm[j]/2);
+    for (size_t i = 0; i < j; i++) {
+      B[i][j] = coord_sampler[j](gen);
+    }
   }
 
   cout << "------- Main Logic (Constraint) Test -------" << endl;
@@ -26,7 +42,7 @@ ConstraintTest::ConstraintTest(
   cout << endl;
 }
 
-vector<pair<secret, vector<double>>> ConstraintTest::sparse_secret_list(
+vector<pair<secret, vector<double>>> UniformTest::sparse_secret_list(
   matrix& Mtrans, uint32_t d, uint32_t w) 
 {
   vector<pair<secret, vector<double>>> R;
@@ -63,7 +79,7 @@ vector<pair<secret, vector<double>>> ConstraintTest::sparse_secret_list(
   }
 }
 
-vector<secret> ConstraintTest::enumerate_secrets(uint32_t d, uint32_t w)
+vector<secret> UniformTest::enumerate_secrets(uint32_t d, uint32_t w)
 {
   vector<secret> R;
   if (d == 0 | d < w) {
@@ -125,10 +141,10 @@ void ConstraintTest::recur_check(
     }
     auto s2 = sub(s1, s);
     if (weight_ternary_check(s2, k)) {
-      fmodvec(Ms1, GSnorm);
+      Ms1 = babaiNP(Ms1, B);
       if (inf_norm(Ms1, m-proj_dim) <= constraint_bound) {
         auto Ms2 = subvec(Ms1, e);
-        fmodvec(Ms2, GSnorm);
+        Ms2 = babaiNP(Ms2, B);
         if (inf_norm(Ms2, m-proj_dim) <= constraint_bound) {
           count++;
         }
@@ -151,7 +167,7 @@ void ConstraintTest::recur_check(
   }
 }
 
-void ConstraintTest::gen_noisy_instance(
+void UniformTest::gen_noisy_instance(
   matrix& M, vector<int64_t>& s, vector<double>& error)
 {
   random_device rd;
@@ -162,11 +178,10 @@ void ConstraintTest::gen_noisy_instance(
   A.resize(m);
   for (size_t i = 0 ; i < m; i++) {
     A[i].resize(n-1);
-    coord_sampler[i] = uniform_real_distribution<double>(0, GSnorm[i]);
+    coord_sampler[i] = uniform_real_distribution<double>(-GSnorm[i]/2, GSnorm[i]/2);
     for (size_t j = 0; j < n-1; j++) {
       A[i][j] = coord_sampler[i](gen);
     }
-    fmodvec(A[i], GSnorm);
   }
 
   s.resize(n-1);
@@ -204,8 +219,8 @@ void ConstraintTest::gen_noisy_instance(
       b[k] += error[k];
     }
   }
-  fmodvec(b, GSnorm);
-
+  b = babaiNP(b, B);
+  
   M.resize(m);
   for (size_t i = 0; i < m; i++) {
     M[i].resize(n);
@@ -216,48 +231,67 @@ void ConstraintTest::gen_noisy_instance(
   }
 };
 
-void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound, uint32_t target_pair_num)
+void UniformTest::gen_noisy_instance_fixed_error(
+  matrix& M, vector<int64_t>& s, const vector<double>& error)
 {
-  auto R = ambiguity(n, h, guess_weight);
-  proj_dim = 1;
-  vol_ratio = 1;
-  p_adm = 1;
-  auto m = GSnorm.size();
-
-  while (true) {
-    if (proj_dim == m) break;
-    
-    double cur_ratio = 1;
-    double cur_axis_length = (2*constraint_bound < GSnorm[m-proj_dim]) ?
-                              2*constraint_bound : GSnorm[m-proj_dim];
-    double cur_p_adm = unif? 
-                      prob_admissible_uniform(e, cur_axis_length): 
-                      prob_admissible_gaussian(e, cur_axis_length);
-    if (2*constraint_bound < GSnorm[m-proj_dim]) {
-      cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
-    }
-
-    auto inv = (double) target_pair_num / (p_adm * cur_p_adm / cur_ratio);
-    if (R < inv) {
-      proj_dim -= 1;
-      break;
-    }
-    else {
-      p_adm *= cur_p_adm / cur_ratio;
-      vol_ratio *= cur_ratio;
-      proj_dim += 1;
+  random_device rd;
+  mt19937 gen(rd());
+  vector<uniform_real_distribution<double>> coord_sampler(m);
+  
+  matrix A;
+  A.resize(m);
+  for (size_t i = 0 ; i < m; i++) 
+  {
+    A[i].resize(n-1);
+    coord_sampler[i] = uniform_real_distribution<double>(-GSnorm[i]/2, GSnorm[i]/2);
+    for (size_t j = 0; j < n-1; j++) 
+    {
+      A[i][j] = coord_sampler[i](gen);
     }
   }
 
-  cout << "**** Theorical Computations ****"  << endl;
-  cout << "- # of reps (Ambiguity R): " << R << endl;
-  cout << "- Projection dim (r): " << proj_dim << endl;
-  cout << "- p_rep (log): " << p_adm << " (" << log2(p_adm) << ")" << endl;
-  cout << "- # Pairs (R * p_rep) = " << R * p_adm << endl;
-        // << " / E(|L_1|) = " << binom(n, guess_weight)*(1ull << guess_weight) << "/" << vol_ratio
-        // << " = " << binom(n, guess_weight)*(1ull << guess_weight) / vol_ratio << endl;
-  cout << endl;
-}
+  s.resize(n-1);
+  uniform_int_distribution<int64_t> binrand(0, 1);
+  for (size_t i = 0; i < h-1; i++) 
+  {
+    s[i] = 2*binrand(gen)-1;
+  }
+  for (size_t i = h-1; i < n-1; i++) 
+  {
+    s[i] = 0;
+  }
+  shuffle(begin(s), end(s), gen);
+  s.push_back(1);
+
+  vector<double> b(m);
+  for (size_t k = 0; k < n-1; k++) 
+  {
+    if (s[k] != 0) {
+      for (size_t i = 0; i < m; i++) 
+      {
+        b[i] += s[k] * A[i][k];
+      }
+    }
+  }
+
+  for (size_t k = 0; k < m; k++) 
+  {
+    b[k] += error[k];
+  }
+  b = babaiNP(b, B);
+
+  M.resize(m);
+  for (size_t i = 0; i < m; i++) 
+  {
+    M[i].resize(n);
+    for (size_t j = 0; j < n-1; j++) 
+    {
+      M[i][j] = -A[i][j];
+    }
+    M[i][n-1] = b[i];
+  }
+};
+
 
 vector<pair<secret, vector<double>>> ConstraintTest::build_list(
   matrix& M, uint32_t guess_weight, double constraint_bound)
@@ -270,13 +304,66 @@ vector<pair<secret, vector<double>>> ConstraintTest::build_list(
   for (auto& p: S) {
     auto v = p.first;
     auto Mv = p.second;
-    fmodvec(Mv, GSnorm);
+    Mv = babaiNP(Mv, B);
 
     if (inf_norm(Mv, m-proj_dim) <= constraint_bound)
       L.push_back(make_pair(v, Mv));
   }
   return L;
 };
+
+void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint_bound, uint32_t target_pair_num)
+{
+  auto R = ambiguity(n, h, guess_weight);
+  proj_dim = 1;
+  vol_ratio = 1;
+  p_adm_avg = 1;
+  p_adm_wst = 1.0;
+  auto m = GSnorm.size();
+
+  double error_bound = unif ? e : 3*e;
+
+  while (true) {
+    if (proj_dim == m) break;
+    
+    double cur_ratio = 1;
+    double cur_axis_length = (2*constraint_bound < GSnorm[m-proj_dim]) ?
+                              2*constraint_bound : GSnorm[m-proj_dim];
+    double cur_p_adm_avg = unif? 
+                      prob_admissible_uniform(e, cur_axis_length): 
+                      prob_admissible_gaussian(e, cur_axis_length);
+    double cur_p_adm_wst = (1.0 - error_bound / cur_axis_length);
+
+    if (2*constraint_bound < GSnorm[m-proj_dim]) {
+      cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
+    }
+
+    auto inv = (double) target_pair_num / (p_adm_avg * cur_p_adm_avg / cur_ratio);
+    if (R < inv) {
+      proj_dim -= 1;
+      break;
+    }
+    else {
+      p_adm_avg *= cur_p_adm_avg / cur_ratio;
+      p_adm_wst *= cur_p_adm_wst / cur_ratio;
+      vol_ratio *= cur_ratio;
+      proj_dim += 1;
+    }
+  }
+
+  cout << "**** Theory & Expectation ****"  << endl;
+  cout << "- # of reps (Ambiguity R): " << R << endl;
+  cout << "- Projection dim (r): " << proj_dim << endl;
+  cout << "- # pairs = " << R * p_adm_avg << " (R*p_adm_avg)" << endl;
+  cout << "- p_rep_avg (log): " << p_adm_avg << " (" << log2(p_adm_avg) << ")" << endl;  
+  cout << "- Pr[#pairs = 0] = " << pow(1 - p_adm_avg, R/2) << endl;
+  cout << "- p_rep_wst (log): " << p_adm_wst << " (" << log2(p_adm_wst) << ")" << endl;
+  cout << "- Pr[#pairs = 0] < " << pow(1 - p_adm_wst, R/2) << endl;  
+  
+  // cout << "- vol_ratio (log): " << vol_ratio << " (" << log2(vol_ratio) << ")" << endl;
+
+  cout << endl;
+}
 
 set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
   matrix& M, secret& s, vector<double>& e, 
@@ -289,8 +376,8 @@ set<pair<secret, secret>> ConstraintTest::fast_check_near_collision(
     if (weight_ternary_check(s2, guess_weight)) {
       auto Ms1 = matmul(Mtrans, s1);
       auto Ms2 = subvec(Ms1, e);
-      fmodvec(Ms1, GSnorm);
-      fmodvec(Ms2, GSnorm);
+      Ms1 = babaiNP(Ms1, B);
+      Ms2 = babaiNP(Ms2, B);
       if ((inf_norm(Ms1, m-proj_dim) <= constraint_bound) && (inf_norm(Ms2, m-proj_dim) <= constraint_bound)) {
         sol.insert(make_pair(s1, s2));
       }
@@ -446,7 +533,7 @@ set<vector<double>> NearCollisionTest::lsh_based_search(matrix& L)
           hash_table[address] = matrix{p};
         }
       }
-        
+
       for (auto &iterator: hash_table) {
         auto bin = iterator.second;
         auto N = bin.size();

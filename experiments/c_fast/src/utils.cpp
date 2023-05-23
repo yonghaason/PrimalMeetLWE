@@ -14,6 +14,16 @@ double prob_admissible_uniform(double b, double ell)
   else return ell/(2*b);
 }
 
+double prob_admissible_fixed(vector<double> error, double ell, size_t proj_dim)
+{
+  double prob = 1.0;
+  for (size_t i = error.size() - proj_dim; i < error.size(); i++)
+  {
+    prob *= (1.0 - abs(error[i]) / ell);
+  }
+  return prob;
+}
+
 bool weight_ternary_check(secret& s, uint32_t weight)
 {
   if (hamming_weight(s) != weight) return false;
@@ -99,6 +109,20 @@ void fmodvec(vector<double>& v, domain& GSnorm, bool balanced) {
       else if (v[i] < -GSnorm[i]/2) {v[i] += GSnorm[i];}
     }
   }
+}
+
+vector<double> babaiNP(const vector<double>& v, matrix B) {
+  assert(v.size() == B.size());
+  vector<double> v_reduced(v);
+  for (int i = B.size()-1; i >= 0; i--) 
+  {
+    int coeff = round(v_reduced[i] / B[i][i]);
+    for (int j = i; j >= 0; j--)
+    {
+      v_reduced[j] -= coeff * B[j][i];
+    }
+  }
+  return v_reduced;
 }
 
 uint32_t hamming_weight(secret& v) {

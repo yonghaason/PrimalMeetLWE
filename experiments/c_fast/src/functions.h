@@ -34,22 +34,22 @@ private:
 };
 
 ///////////////////////////////////////////////////////////////////////
-/* Tests for the correctness of constraint setting */
+/* Uniformity Tests */
 ///////////////////////////////////////////////////////////////////////
 
-class ConstraintTest {
+class UniformTest {
 public:
-  ConstraintTest(
+  UniformTest(
     uint32_t n, double e, uint64_t q,
     uint32_t h, uint32_t m, bool unif);
 
+  // Genearate instance M of size m X n and s of HW h
+  // such that [Ms]_B = error sampled from D_e (error distribution).
   void gen_noisy_instance(
     matrix& M, vector<int64_t>& s, vector<double>& error);
-
-  /* Output the largest projection dimension r of given domain D,
-  such that "ambiguity * p_adm > target_pair_num" 
-  where "p_adm = Pr[x and x + e both in pi_r(D)]" */
-  void set_constraint_dim(uint32_t guess_weight, double box_length, uint32_t target_pair_num = 1);
+  
+  void gen_noisy_instance_fixed_error(
+    matrix& M, vector<int64_t>& s, const vector<double>& error);
 
   /* Output {(s, Ms): HW(s) = w} */
   vector<pair<secret, vector<double>>> sparse_secret_list(
@@ -57,6 +57,34 @@ public:
 
   /* Output {s: HW(s) = w} */
   vector<secret> enumerate_secrets(uint32_t d, uint32_t w);
+
+  matrix B;
+  domain GSnorm;
+
+  uint32_t m; // # Sample
+  uint32_t n; // LWE dim
+  uint32_t h; // secret weight
+  double e; // stddev if gaussian, error bound if unif
+  bool unif; // error is unif or gaussian
+};
+
+///////////////////////////////////////////////////////////////////////
+/* Tests for the correctness of constraint setting */
+///////////////////////////////////////////////////////////////////////
+
+class ConstraintTest : public UniformTest {
+public:
+  ConstraintTest(
+    uint32_t n, double e, uint64_t q,
+    uint32_t h, uint32_t m, bool unif) 
+  : UniformTest(n, e, q, h, m, unif) {};
+
+  /* Output the largest projection dimension r of given domain D,
+  such that "ambiguity * p_adm > target_pair_num" 
+  where "p_adm = Pr[x and x + e both in pi_r(D)]" */
+  void set_constraint_dim(uint32_t guess_weight, double box_length, uint32_t target_pair_num = 1);
+
+  void set_constraint_dim_worst(uint32_t guess_weight, double constraint_bound, uint32_t error_bound, uint32_t target_pair_num = 1);
 
   /* Output {(s, Ms): HW(s) = w, ||pi_r(Ms)||_inf <= l} */
   vector<pair<secret, vector<double>>> build_list(
@@ -71,7 +99,7 @@ public:
 
   uint32_t new_check_near_collision(
     matrix& M, secret& s, vector<double>& e, 
-    uint32_t guess_weight, double constraint_bound);   
+    uint32_t guess_weight, double constraint_bound);
 
   void recur_check(
     uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
@@ -79,15 +107,7 @@ public:
     uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k);
 
   uint64_t proj_dim;
-  uint64_t full_list_size;
-  double p_adm;
-  double vol_ratio;  
-  domain GSnorm;
-
-private:
-  uint32_t m; // # Sample
-  uint32_t n; // LWE dim
-  uint32_t h; // secret weight
-  double e; // stddev if gaussian, error bound if unif
-  bool unif; // error is unif or gaussian
+  double p_adm_avg;
+  double p_adm_wst;
+  double vol_ratio;
 };

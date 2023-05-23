@@ -61,35 +61,43 @@ int main(int argc, char* argv[]) {
   // cout << "**** Start experiments with random M and s ****" << endl;
   matrix M; secret s; vector<double> e;
   cons_test.gen_noisy_instance(M, s, e);
+
+  auto R = ambiguity(d, h, guess_weight);
+  auto p_rep = prob_admissible_fixed(e, 2*constraint_bound, cons_test.proj_dim);
+  p_rep /= cons_test.vol_ratio;
+  cout << "**** Expectations ****" << endl;
+  cout << "- p_rep (log) = " << p_rep << " (" << log2(p_rep) << ")" << endl;
+  cout << "- Pr[# pairs = 0] = " << pow(1 - p_rep, R/2) << endl;
+  cout << "- # pairs = " << (double) R * (double) p_rep << " ~ 2B(" << R/2 << ", " << p_rep << ")" << endl;
+  cout << endl;
   
   auto cnt = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
 
   double avg_sol = cnt;
-
-  cout << fixed;
-	cout.precision(4);
   
   //  Actual List Construction & Collision Finding
-  cout << "**** Reals ****" << endl;
   map<size_t, size_t> stats_sol;
   size_t zero_cnt = 0;
   for (size_t i = 1; i < repetition; i++) {
-    cons_test.gen_noisy_instance(M, s, e);
+    cons_test.gen_noisy_instance_fixed_error(M, s, e);
     
     auto cnt = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
     
     avg_sol = (avg_sol * i + (double) cnt) / (i+1);
-    if ((i+1) % print_term == 0) {
-      cout << "Avg of " << setw(5) << i+1 
-      << " execs: Pr[# pairs = 0] = " << (double) zero_cnt / (double) (i+1) 
-      << " / # Pairs = " << avg_sol << endl;
-    }
+    // if ((i+1) % print_term == 0) {
+    //   cout << setw(3) << "- " << i+1 << " executions: E(# Pairs) = " << avg_sol << endl;
+    // }
     auto filled = stats_sol.count(cnt);
     if (filled == 1) {stats_sol[cnt]++;}
     else {stats_sol.insert({cnt, 1});}
 
     if (cnt == 0) zero_cnt++;
   }
+
+  cout << "**** Reals ****" << endl;
+  cout << "- Pr[# pairs = 0] = " << (double) zero_cnt / (double) repetition << " = " << zero_cnt << " / " << repetition << endl;
+
+  cout << setw(3) << "- # Pairs (Avg) = " << avg_sol << endl;
 
   cout << "\n**** Stats ****" << endl;
   for (auto stat: stats_sol) {

@@ -67,6 +67,7 @@ int main(int argc, char* argv[]) {
 
   auto near_collision_num = 1000;
   
+  cout << "**** Real experiments ****" << endl;
   auto L = nc_test.gen_instance(near_collision_num, N);
   auto sol = nc_test.lsh_based_search(L);
   double avg_sol = sol.size();

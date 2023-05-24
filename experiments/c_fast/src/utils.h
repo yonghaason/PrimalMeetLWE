@@ -20,6 +20,7 @@ uint64_t ambiguity(uint32_t n, uint32_t h, uint32_t w);
 double prob_admissible_gaussian(double stddev, double ell);
 double prob_admissible_uniform(double b, double ell);
 double prob_admissible_fixed(vector<double> error, double ell, size_t proj_dim = 0);
+double prob_admissible_fixed(vector<double> error, vector<double> ell, size_t lsh_dim);
 
 bool weight_ternary_check(secret& s, uint32_t weight);
 

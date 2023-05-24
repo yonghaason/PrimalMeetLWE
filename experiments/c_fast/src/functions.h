@@ -80,8 +80,8 @@ public:
   : UniformTest(n, e, q, h, m, unif) {};
 
   /* Output the largest projection dimension r of given domain D,
-  such that "ambiguity * p_adm > target_pair_num" 
-  where "p_adm = Pr[x and x + e both in pi_r(D)]" */
+  such that "ambiguity * p_rep > target_pair_num" 
+  where "p_rep = Pr[x and x + e both in pi_r(D)]" */
   void set_constraint_dim(uint32_t guess_weight, double box_length, uint32_t target_pair_num = 1);
 
   void set_constraint_dim_worst(uint32_t guess_weight, double constraint_bound, uint32_t error_bound, uint32_t target_pair_num = 1);
@@ -107,7 +107,7 @@ public:
     uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k);
 
   uint64_t proj_dim;
-  double p_adm_avg;
-  double p_adm_wst;
+  double p_rep_avg;
+  double p_rep_wst;
   double vol_ratio;
 };

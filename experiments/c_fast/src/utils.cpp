@@ -17,9 +17,20 @@ double prob_admissible_uniform(double b, double ell)
 double prob_admissible_fixed(vector<double> error, double ell, size_t proj_dim)
 {
   double prob = 1.0;
+  if (proj_dim == 0) proj_dim = error.size();
   for (size_t i = error.size() - proj_dim; i < error.size(); i++)
   {
     prob *= (1.0 - abs(error[i]) / ell);
+  }
+  return prob;
+}
+
+double prob_admissible_fixed(vector<double> error, vector<double> lengths, size_t lsh_dim)
+{
+  double prob = 1.0;
+  for (size_t i = 0; i < lsh_dim; i++)
+  {
+    prob *= (1.0 - abs(error[i]) / lengths[i]);
   }
   return prob;
 }

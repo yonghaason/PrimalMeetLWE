@@ -317,8 +317,8 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint
   auto R = ambiguity(n, h, guess_weight);
   proj_dim = 1;
   vol_ratio = 1;
-  p_adm_avg = 1;
-  p_adm_wst = 1.0;
+  p_rep_avg = 1;
+  p_rep_wst = 1.0;
   auto m = GSnorm.size();
 
   double error_bound = unif ? e : 3*e;
@@ -329,23 +329,23 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint
     double cur_ratio = 1;
     double cur_axis_length = (2*constraint_bound < GSnorm[m-proj_dim]) ?
                               2*constraint_bound : GSnorm[m-proj_dim];
-    double cur_p_adm_avg = unif? 
+    double cur_p_rep_avg = unif? 
                       prob_admissible_uniform(e, cur_axis_length): 
                       prob_admissible_gaussian(e, cur_axis_length);
-    double cur_p_adm_wst = (1.0 - error_bound / cur_axis_length);
+    double cur_p_rep_wst = (1.0 - error_bound / cur_axis_length);
 
     if (2*constraint_bound < GSnorm[m-proj_dim]) {
       cur_ratio = GSnorm[m-proj_dim] / (2*constraint_bound);
     }
 
-    auto inv = (double) target_pair_num / (p_adm_avg * cur_p_adm_avg / cur_ratio);
+    auto inv = (double) target_pair_num / (p_rep_avg * cur_p_rep_avg / cur_ratio);
     if (R < inv) {
       proj_dim -= 1;
       break;
     }
     else {
-      p_adm_avg *= cur_p_adm_avg / cur_ratio;
-      p_adm_wst *= cur_p_adm_wst / cur_ratio;
+      p_rep_avg *= cur_p_rep_avg / cur_ratio;
+      p_rep_wst *= cur_p_rep_wst / cur_ratio;
       vol_ratio *= cur_ratio;
       proj_dim += 1;
     }
@@ -354,13 +354,12 @@ void ConstraintTest::set_constraint_dim(uint32_t guess_weight, double constraint
   cout << "**** Theory & Expectation ****"  << endl;
   cout << "- # of reps (Ambiguity R): " << R << endl;
   cout << "- Projection dim (r): " << proj_dim << endl;
-  cout << "- # pairs = " << R * p_adm_avg << " (R*p_adm_avg)" << endl;
-  cout << "- p_rep_avg (log): " << p_adm_avg << " (" << log2(p_adm_avg) << ")" << endl;  
-  cout << "- Pr[#pairs = 0] = " << pow(1 - p_adm_avg, R/2) << endl;
-  cout << "- p_rep_wst (log): " << p_adm_wst << " (" << log2(p_adm_wst) << ")" << endl;
-  cout << "- Pr[#pairs = 0] < " << pow(1 - p_adm_wst, R/2) << endl;  
-  
-  // cout << "- vol_ratio (log): " << vol_ratio << " (" << log2(vol_ratio) << ")" << endl;
+  cout << "- # pairs = " << R * p_rep_avg << " (R*p_rep_avg)" << endl;
+  cout << "- p_rep_avg (log): " << p_rep_avg << " (" << log2(p_rep_avg) << ")" << endl;  
+  cout << "- Pr[#pairs = 0] = " << pow(1 - p_rep_avg, R/2) << endl;
+  // cout << "- p_rep_wst (log): " << p_rep_wst << " (" << log2(p_rep_wst) << ")" << endl;
+  // cout << "- Pr[#pairs = 0] < " << pow(1 - p_rep_wst, R/2) << endl;  
+  cout << "- vol_ratio (log): " << vol_ratio << " (" << log2(vol_ratio) << ")" << endl;
 
   cout << endl;
 }
@@ -445,8 +444,9 @@ NearCollisionTest::NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif
     }
   }
   
-  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim << ", p_good = " << p_good << endl;
-
+  cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim 
+  << ", E(p_good) (log) = " << p_good << " (" << log2(p_good) << ")" << endl;
+  cout << endl;
 }
 
 matrix NearCollisionTest::gen_instance(
@@ -464,21 +464,37 @@ matrix NearCollisionTest::gen_instance(
   normal_distribution<double> gaussian_sampler(0, e);
   uniform_real_distribution<double> unif_sampler(-e, e);
 
+  double p_good_max = 0, p_good_min = 1.0, p_good_mean = 0, p_good_var = 0;
+
   for (size_t i = 0; i < near_collision_num; i++) {
     vector<double> pair1(r);
     vector<double> pair2(r);
+    vector<double> error(r);
     for (size_t j = 0; j < r; j++) {
       pair1[j] = sampler[j](gen);
-      double error;
-      error = unif? unif_sampler(gen): gaussian_sampler(gen);
-      while ((pair1[j] + error > dom[j]) | (pair1[j] + error <= 0)) {
-        error = unif? unif_sampler(gen): gaussian_sampler(gen);
+      error[j] = unif? unif_sampler(gen): gaussian_sampler(gen);
+      while ((pair1[j] + error[j] > dom[j]) | (pair1[j] + error[j] <= 0)) {
+        error[j] = unif? unif_sampler(gen): gaussian_sampler(gen);
       }
-      pair2[j] = pair1[j] + error;
+      pair2[j] = pair1[j] + error[j];
     }
+    double p_good_cur = prob_admissible_fixed(error, lsh_lengths, lsh_dim);
+    p_good_max = max(p_good_cur, p_good_max);
+    p_good_min = min(p_good_cur, p_good_min);
+    p_good_mean += p_good_cur;
+    p_good_var += p_good_cur * p_good_cur;
+
     result.push_back(pair1);
     result.push_back(pair2);
   }
+
+  cout << fixed;
+	cout.precision(4);
+
+  p_good_mean = p_good_mean / near_collision_num;
+  p_good_var = p_good_var / near_collision_num - p_good_mean * p_good_mean;
+
+  cout << "p_good in [" << p_good_min << ", " << p_good_max << "], E(p_good): " << p_good_mean << ", V(p_good): " << p_good_var << endl;
 
   while (result.size() < output_size) {
     vector<double> randvec(r);

@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   parser.add<uint64_t>("q", 'q', "Modulus param that determines the domain", false, 2048);
 
   parser.add<uint32_t>("repeat", '\0', "Number of total experiments", false, 100);
-  parser.add<uint32_t>("print_term", '\0', "Print avgs after THIS_VALUE experiments", false, 50);
+  parser.add<uint32_t>("print_term", '\0', "Print avgs after THIS_VALUE experiments", false, 100);
   
   parser.parse_check(argc, argv);
 
@@ -61,40 +61,56 @@ int main(int argc, char* argv[]) {
   // cout << "**** Start experiments with random M and s ****" << endl;
   matrix M; secret s; vector<double> e;
   cons_test.gen_noisy_instance(M, s, e);
-  
-  auto cnt = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
 
-  double avg_sol = cnt;
+  auto p_rep = prob_admissible_fixed(e, 2*constraint_bound, cons_test.proj_dim);
+  p_rep /= cons_test.vol_ratio;
+  double p_rep_max = p_rep, p_rep_min = p_rep, p_rep_mean = p_rep, p_rep_var = p_rep*p_rep;
+  
+  auto num_pairs = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
+
+  double num_pairs_avg = num_pairs;
 
   cout << fixed;
 	cout.precision(4);
   
   //  Actual List Construction & Collision Finding
   cout << "**** Reals ****" << endl;
-  map<size_t, size_t> stats_sol;
-  size_t zero_cnt = 0;
+  map<size_t, size_t> num_pairs_stats;
+  size_t failures = 0;
   for (size_t i = 1; i < repetition; i++) {
     cons_test.gen_noisy_instance(M, s, e);
+
+    p_rep = prob_admissible_fixed(e, 2*constraint_bound, cons_test.proj_dim);
+    p_rep /= cons_test.vol_ratio;
+    p_rep_max = max(p_rep, p_rep_max);
+    p_rep_min = min(p_rep, p_rep_min);
+    p_rep_mean += p_rep;
+    p_rep_var += p_rep*p_rep;
     
-    auto cnt = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
+    auto num_pairs = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
     
-    avg_sol = (avg_sol * i + (double) cnt) / (i+1);
+    num_pairs_avg += num_pairs;
     if ((i+1) % print_term == 0) {
       cout << "Avg of " << setw(5) << i+1 
-      << " execs: Pr[# pairs = 0] = " << (double) zero_cnt / (double) (i+1) 
-      << " / # Pairs = " << avg_sol << endl;
+      << " execs: Pr[# pairs = 0] = " << (double) failures / (double) (i+1) 
+      << " / # Pairs = " << num_pairs_avg / (i+1) << endl;
     }
-    auto filled = stats_sol.count(cnt);
-    if (filled == 1) {stats_sol[cnt]++;}
-    else {stats_sol.insert({cnt, 1});}
+    auto filled = num_pairs_stats.count(num_pairs);
+    if (filled == 1) {num_pairs_stats[num_pairs]++;}
+    else {num_pairs_stats.insert({num_pairs, 1});}
 
-    if (cnt == 0) zero_cnt++;
+    if (num_pairs == 0) failures++;
   }
 
-  cout << "\n**** Stats ****" << endl;
-  for (auto stat: stats_sol) {
-    cout << "- \'|L_0| = " << stat.first << "\' occurs " << stat.second << " times" << endl;
-  }
+  cout << "\n**** Some Stats ****" << endl;
+  p_rep_mean = p_rep_mean / repetition;
+  p_rep_var = p_rep_var / repetition - p_rep_mean * p_rep_mean;
+
+  cout << "p_reps lies in [" << p_rep_min << ", " << p_rep_max << "] with E(p_rep): " << p_rep_mean << ", V(p_rep): " << p_rep_var << endl;
+
+  // for (auto stat: num_pairs_stats) {
+  //   cout << "- \'|L_0| = " << stat.first << "\' occurs " << stat.second << " times" << endl;
+  // }
 
   return 0;
 }

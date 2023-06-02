@@ -69,9 +69,6 @@ int main(int argc, char* argv[]) {
   auto num_pairs = cons_test.new_check_near_collision(M, s, e, guess_weight, constraint_bound);
 
   double num_pairs_avg = num_pairs;
-
-  cout << fixed;
-	cout.precision(4);
   
   //  Actual List Construction & Collision Finding
   cout << "**** Reals ****" << endl;
@@ -107,6 +104,7 @@ int main(int argc, char* argv[]) {
   p_rep_var = p_rep_var / repetition - p_rep_mean * p_rep_mean;
 
   cout << "p_reps lies in [" << p_rep_min << ", " << p_rep_max << "] with E(p_rep): " << p_rep_mean << ", V(p_rep): " << p_rep_var << endl;
+  cout << "p_reps*vol lies in [" << p_rep_min*cons_test.vol_ratio << ", " << p_rep_max*cons_test.vol_ratio << "]" << endl;
 
   // for (auto stat: num_pairs_stats) {
   //   cout << "- \'|L_0| = " << stat.first << "\' occurs " << stat.second << " times" << endl;

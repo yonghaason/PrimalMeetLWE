@@ -33,14 +33,10 @@ int main(int argc, char* argv[]) {
   l = parser.get<double>("l");
 
   auto m = d;
-  vector<double> GSnorm;
-  GSnorm.resize(m);
-  for (size_t i = 0; i < m; i++) {
-    GSnorm[i] = pow(q, (1.0 - (double) i/(2*m)));
-  }
-
+    
   UniformTest unif_test(d, 1, q, h, m, true);
   matrix B = unif_test.B;
+  auto GSnorm = unif_test.GSnorm;
   matrix M; secret s; vector<double> e;
   unif_test.gen_noisy_instance(M, s, e);
   auto Mtrans = transpose(M);
@@ -64,7 +60,10 @@ int main(int argc, char* argv[]) {
   double vol_ratio = 1;
   for (size_t i = 0; i < m; i++)
   {
-    vol_ratio *= (2*l / GSnorm[i]);
+    if (GSnorm[i] > 2*l) 
+    {
+      vol_ratio *= (2*l / GSnorm[i]);
+    }
   }
 
   double Ms_ratio = (double) count / (double) Ms_list.size();

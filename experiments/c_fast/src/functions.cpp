@@ -32,10 +32,10 @@ UniformTest::UniformTest(
     }
   }
 
-  cout << "------- Main Logic (Constraint) Test -------" << endl;
   cout << "- Dim n = " << n << endl;
+  cout << "- Coordinate Length: [" << GSnorm[0] << ", ... , " 
+      << GSnorm[m-1] << "] (GSA)" << endl;
   cout << "- # Sample m = " << m << endl;
-  cout << "- Domain: Simulation of GSA from " << q << " to " << GSnorm[m-1] << endl;
   cout << "- Error distribution : ";
   if (unif) cout << "Uniform over [-" << e << ", " << e << "]" << endl;
   else cout << "Gaussian of stddev = " << e << endl;
@@ -443,9 +443,11 @@ NearCollisionTest::NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif
       else p_good *= prob_admissible_gaussian(e, lsh_lengths[i]);
     }
   }
-  
+
+  uint64_t iteration = ceil(iter_mult / p_good);
   cout << "LSH length: " << lsh_length << ", LSH dim = " << lsh_dim 
-  << ", E(p_good) (log) = " << p_good << " (" << log2(p_good) << ")" << endl;
+  << ", E(p_good) (log) = " << p_good << " (" << log2(p_good) << ")"
+  << ", Pr[LSH fails] = " << pow((1 - p_good), iteration) << endl;
   cout << endl;
 }
 

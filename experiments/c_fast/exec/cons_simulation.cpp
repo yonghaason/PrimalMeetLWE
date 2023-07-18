@@ -84,11 +84,10 @@ int main(int argc, char* argv[])
   }
 
   cout << "**** Theory ****" << endl;
-  // cout << "- Volume ratio : " << vol_ratio << " (=2^" << log2(vol_ratio) << ")" << endl;
-  // cout << "- E[p_rep] : " << p_rep_mean_theory << " (=2^" << log2(p_rep_mean_theory) << ")"
-  //      << ", R = " << C << " / E[p_rep]" << endl;
   cout << "- E[p_rep/vol_ratio] : " << p_rep_mean_theory/vol_ratio << " (=2^" << log2(p_rep_mean_theory/vol_ratio) << ")" <<  endl;
-  cout << "- R ~ " << C << " / p_rep" << endl; 
+  cout << "- R ~ ";
+  if (R == 0) {cout << R << endl;}
+  else {cout << C << " / p_rep" << endl;}
   cout << "- Expect: 1 - (1 - E[p_rep])^R ~ 1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;
   cout << endl;
 

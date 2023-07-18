@@ -86,18 +86,19 @@ int main(int argc, char* argv[])
   cout << "**** Theory ****" << endl;
   cout << "- E[p_rep/vol_ratio] : " << p_rep_mean_theory/vol_ratio << " (=2^" << log2(p_rep_mean_theory/vol_ratio) << ")" <<  endl;
   cout << "- R ~ ";
-  if (R == 0) {cout << R << endl;}
+  if (R != 0) {cout << R << endl;}
   else {cout << C << " / p_rep" << endl;}
-  cout << "- Expect: 1 - (1 - E[p_rep])^R ~ 1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;
+  cout << "- Expect: 1 - (1 - E[p_rep])^R";
+  if (R != 0) {cout << 1.0 - pow(1 - p_rep_mean_theory, R) << endl;}
+  else {cout << "1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;}
   cout << endl;
 
   double scale = pow(2, -scaler) / p_rep_mean_theory;
   vol_ratio *= scale;
-  p_rep_mean_theory *= scale;
-
+  
   if (R == 0) 
   {
-    R = C / p_rep_mean_theory;
+    R = scale * C / p_rep_mean_theory;
   }
     
   // size_t R = C / p_rep_mean_theory;

@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
   parser.add<int32_t>("multiple", '\0', "# of execution: C * 1/E(p_rep)", false, 1);
   parser.add<uint32_t>("repeat", '\0', "# of sampling to estimate E[(1-p_rep)^R]", false, 10000);
   parser.add<int32_t>("scaler", '\0', "scale for precision", false, 25);
+  parser.add<uint64_t>("Repetition", '\0', "# of execution: R", false, 0);
 
   parser.parse_check(argc, argv);
   auto q = parser.get<double>("coord-length");
@@ -33,7 +34,8 @@ int main(int argc, char* argv[])
   auto b = parser.get<double>("error-param");
   auto C = parser.get<int32_t>("multiple");
   auto scaler = parser.get<int32_t>("scaler");
-  uint32_t repeat = parser.get<uint32_t>("repeat");
+  auto repeat = parser.get<uint32_t>("repeat");
+  auto R = parser.get<uint64_t>("Repetition");
 
   vector<double> GSnorm(r);
   vector<double> cons_len(r);
@@ -94,7 +96,12 @@ int main(int argc, char* argv[])
   vol_ratio *= scale;
   p_rep_mean_theory *= scale;
 
-  size_t R = C / p_rep_mean_theory;
+  if (R == 0) 
+  {
+    R = C / p_rep_mean_theory;
+  }
+    
+  // size_t R = C / p_rep_mean_theory;
 
   experiment(is_error_unif, vol_ratio, R, cons_len, b, r, scale, repeat);
 

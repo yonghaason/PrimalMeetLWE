@@ -8,8 +8,7 @@ using namespace std;
 
 void experiment(
   bool is_error_unif, double vol_ratio, size_t R, 
-  vector<double> cons_len, double b, size_t r, 
-  double scale, size_t repeat);
+  vector<double> cons_len, double b, size_t r, size_t repeat);
 
 int main(int argc, char* argv[]) 
 {
@@ -96,29 +95,29 @@ int main(int argc, char* argv[])
 
   double scale = pow(2, -scaler) / p_rep_mean_theory;
   vol_ratio *= scale;
+  p_rep_mean_theory *= scale;
   
   if (R == 0) 
   {
-    R = scale * C / p_rep_mean_theory;
+    R = C / p_rep_mean_theory;
   }
     
   // size_t R = C / p_rep_mean_theory;
 
-  experiment(is_error_unif, vol_ratio, R, cons_len, b, r, scale, repeat);
+  experiment(is_error_unif, vol_ratio, R, cons_len, b, r, repeat);
 
   return 0;
 }
 
 void experiment(
   bool is_error_unif, double vol_ratio, size_t R, 
-  vector<double> cons_len, double b, size_t r, 
-  double scale, size_t repeat)
+  vector<double> cons_len, double b, size_t r, size_t repeat)
 {
   random_device rd;
   mt19937 gen(rd());
   
   // Estimate E[(1 - p_rep)^R] 
-  double acc = 0.0;
+  double acc = 0.0, acc2 = 0.0;
   double p_rep_mean = 0.0, p_rep_var = 0.0, p_rep_max = 0.0, p_rep_min = 1.0;
   auto normal_sampler = normal_distribution<double>(0, b);
   auto unif_sampler = uniform_real_distribution<double>(-b, b);
@@ -136,11 +135,13 @@ void experiment(
     p_rep_mean += p_rep;
     p_rep_var += p_rep*p_rep;
     acc += pow(1-p_rep, R);
+    acc2 += exp(-p_rep*R);
   }
   p_rep_mean /= repeat;
   p_rep_var /= repeat;
   p_rep_var -= p_rep_mean*p_rep_mean;
   acc /= repeat;
+  acc2 /= repeat;
 
   cout << "**** Real ****" << endl;
   // cout << "- p_rep range : [" << p_rep_min << ", " << p_rep_max << "] = " 
@@ -149,7 +150,8 @@ void experiment(
        << "[2^" << log2(p_rep_min/vol_ratio) << ", 2^" << log2(p_rep_max/vol_ratio) << "]" << ")" << endl;
   // cout << "- E[p_rep] : " << p_rep_mean << " = 2^" << log2(p_rep_mean) << endl;
   cout << "- E[p_rep/vol_ratio] : " << p_rep_mean/vol_ratio << " (=2^" << log2(p_rep_mean/vol_ratio) << ")" << endl;
-  cout << "- s[p_rep/vol_ratio] : " << sqrt(p_rep_var)/vol_ratio 
-       << " (=2^" << 0.5*log2(p_rep_var) - log2(vol_ratio) << ")" << endl;
+  // cout << "- s[p_rep/vol_ratio] : " << sqrt(p_rep_var)/vol_ratio 
+  //      << " (=2^" << 0.5*log2(p_rep_var) - log2(vol_ratio) << ")" << endl;
   cout << "- E[1 - (1 - p_rep)^R] : " << 1 - acc << " (=2^" << log2(1 - acc) << ")" << endl;
+  cout << "- E[exp(R*p_rep)] : " << 1 - acc2 << " (=2^" << log2(1 - acc2) << ")" << endl;
 }

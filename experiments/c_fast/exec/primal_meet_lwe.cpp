@@ -2,19 +2,13 @@
 #include "cmdline.h"
 #include <iostream>
 #include <iomanip>
-#include <chrono>
-#include <map>
 #include <random>
-
-// ./unif_test -d 20 -h 8 -l 0.5 -q 4
 
 using namespace std;
 
-int main(int argc, char* argv[]) {
-  
-  chrono::system_clock::time_point start, end;
-
-  uint32_t d, h; 
+int main(int argc, char* argv[])
+{
+  uint32_t d, h, w;
   uint64_t q;
   double l;
 
@@ -22,6 +16,7 @@ int main(int argc, char* argv[]) {
 
   parser.add<uint32_t>("d", 'd', "Dimension (r^(i-1) in paper)", true, 20);
   parser.add<uint32_t>("h", 'h', "Secret weight (w^(i-1) in paper)", true, 0);
+  parser.add<uint32_t>("w", 'w', "Guess weight (w^i in paper)", true, 0);
   parser.add<double>("l", 'l', "Constraint bound (ell^(i) in paper)", true, 0);
   parser.add<uint64_t>("q", 'q', "Modulus param that determines the domain", false, 2048);
 
@@ -29,11 +24,12 @@ int main(int argc, char* argv[]) {
 
   d = parser.get<uint32_t>("d");
   h = parser.get<uint32_t>("h");
+  w = parser.get<uint32_t>("w");
   q = parser.get<uint64_t>("q");
   l = parser.get<double>("l");
 
   auto m = d;
-    
+  
   UniformTest unif_test(d, 1, q, h, m, true);
   matrix B = unif_test.B;
   auto GSnorm = unif_test.GSnorm;
@@ -41,35 +37,23 @@ int main(int argc, char* argv[]) {
   unif_test.gen_noisy_instance(M, s, e);
   auto Mtrans = transpose(M);
 
-  auto Ms_list = unif_test.sparse_secret_list(Mtrans, d, h);
+  /**
+   * 1. Top level list construction
+   * 2. Near-collision
+   * 3. Weight-Check 
+  */
 
-  cout << "Ms_list.size() = " << Ms_list.size() << endl;
-
-  size_t count = 0;
-  for (auto &pair : Ms_list)
+  auto top_pair = unif_test.sparse_secret_list(Mtrans, d, h/4);
+  map<vector<double>, secret> mapping;
+  vector<domain> top_Ms;
+  for (auto &pair: top_pair)
   {
-    auto Ms = pair.second;
-    Ms = babaiNP(Ms, B);
-    double norm = inf_norm(Ms);
-    if (norm <= l) 
-    {
-      count++;
-    }
+    mapping[pair.second] = pair.first;
   }
+  NearCollisionTest nc_test(r, q, e, unif, lsh_dim, lsh_length, iteration_multiple);
+  auto sol = nc_test.lsh_based_search(top_Ms);
 
-  double vol_ratio = 1;
-  for (size_t i = 0; i < m; i++)
-  {
-    if (GSnorm[i] > 2*l) 
-    {
-      vol_ratio *= (2*l / GSnorm[i]);
-    }
-  }
-
-  double Ms_ratio = (double) count / (double) Ms_list.size();
-
-  cout << "Volume Ratio: " << vol_ratio << endl;
-  cout << "Ms in Box Ratio: " << Ms_ratio << endl;
+  // 미완
 
   return 0;
 }

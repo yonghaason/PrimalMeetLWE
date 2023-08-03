@@ -7,27 +7,13 @@ file(GLOB_RECURSE SRCS src/*.cpp)
 
 include_directories(src)
 
-# add_executable(nc_test exec/near_collision_test.cpp)
-# target_sources(nc_test PRIVATE ${SRCS})
+add_executable(jensen_gap exec/jensen_gap.cpp)
+target_sources(jensen_gap PRIVATE ${SRCS})
 
-# add_executable(fcons_test exec/fixed_constraint_test.cpp)
-# target_sources(fcons_test PRIVATE ${SRCS})
+add_executable(ncf_model_test exec/ncf_model_test.cpp)
+target_sources(ncf_model_test PRIVATE ${SRCS})
 
-# add_executable(adm_test exec/admissible_test.cpp)
-# target_sources(adm_test PRIVATE ${SRCS})
+add_executable(pair_model_test exec/pair_model_test.cpp)
+target_sources(pair_model_test PRIVATE ${SRCS})
 
-# add_executable(cons_test exec/constraint_test.cpp)
-# target_sources(cons_test PRIVATE ${SRCS})
-
-add_executable(unif_test exec/uniform_test.cpp)
-target_sources(unif_test PRIVATE ${SRCS})
-
-add_executable(cons_simulation exec/cons_simulation.cpp)
-target_sources(cons_simulation PRIVATE ${SRCS})
-
-add_executable(lsh_simulation exec/lsh_simulation.cpp)
-target_sources(lsh_simulation PRIVATE ${SRCS})
-
-# add_executable(var_test exec/variance_test.cpp)
-# target_sources(var_test PRIVATE ${SRCS})
 

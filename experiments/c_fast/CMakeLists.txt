@@ -15,5 +15,3 @@ target_sources(ncf_model_test PRIVATE ${SRCS})
 
 add_executable(pair_model_test exec/pair_model_test.cpp)
 target_sources(pair_model_test PRIVATE ${SRCS})
-
-

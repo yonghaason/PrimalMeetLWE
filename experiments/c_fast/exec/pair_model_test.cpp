@@ -6,7 +6,7 @@
 #include <map>
 #include <random>
 
-// ./unif_test -d 20 -h 8 -l 0.5 -q 4
+// ./pair_model_test -d 20 -h 8 -w 5 -l 0.5 -q 4
 
 using namespace std;
 

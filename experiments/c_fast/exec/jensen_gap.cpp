@@ -8,7 +8,7 @@ using namespace std;
 
 void experiment(
   bool is_error_unif, size_t R, 
-  double ell, double b, size_t r, size_t repeat);
+  double ell, double b, size_t r, size_t repeat, double scaler);
 
 int main(int argc, char* argv[]) 
 {
@@ -17,9 +17,9 @@ int main(int argc, char* argv[])
   parser.add<double>("length", 'l', "Length l for the constraint box [-l, l]^r", true, 0);
   parser.add<bool>("error-shape", 'u', "Is error uniform?", true, 0);
   parser.add<double>("error-param", 'b', "error bound (for unif) or stddev (for gaussian)", true, 0);
-  parser.add<int32_t>("multiple", 'c', "# of execution: C * 1/E(p_rep)", false, 1);
+  parser.add<double>("multiple", 'c', "# of execution: C * 1/E(p_rep)", false, 1);
   parser.add<uint64_t>("repetition", '\0', "# of execution: R", false, 0);
-  parser.add<int32_t>("scaler", '\0', "scale for precision", false, 25);
+  parser.add<double>("scaler", '\0', "scale for precision", false, 1.0/1000);
   parser.add<uint32_t>("experiments", '\0', "# of sampling to estimate E[1-exp(p_rep*R)]", false, 10000);  
 
   parser.parse_check(argc, argv);
@@ -27,20 +27,25 @@ int main(int argc, char* argv[])
   auto ell = parser.get<double>("length");
   auto is_error_unif = parser.get<bool>("error-shape");
   auto b = parser.get<double>("error-param");
-  auto C = parser.get<int32_t>("multiple");
+  auto C = parser.get<double>("multiple");
   auto R = parser.get<uint64_t>("repetition");
-  auto scaler = parser.get<int32_t>("scaler");
+  auto scaler = parser.get<double>("scaler");
   auto repeat = parser.get<uint32_t>("experiments");
 
   cout << "**** Params ****" << endl;
   cout << "Constraint box: [" << -ell << ", " << ell << "]^" << r << endl;
   cout << "Error distribution: ";
-  if (is_error_unif) cout << "U[" << -b << ", " << b << "]" << endl;
+  if (is_error_unif) cout << "U[" << -b << ", " << b << "]^" << r << endl;
+  else cout << "Gaussian with std.dev " << b << "" << endl;
+  cout << "---- OR ---- " << endl;
+  cout << "LSH-block length: " << 2*ell << endl;
+  cout << "Near-collision of distance: ";
+  if (is_error_unif) cout << "U[" << -b << ", " << b << "]^" << r << endl;
   else cout << "Gaussian with std.dev " << b << "" << endl;
   cout << endl;
 
   // Compute E[p_rep], and set R ~ 1/E[p_rep]
-  double p_rep_mean_theory = 1;
+  double p_rep_mean_theory = scaler;
   for (size_t i = 0; i < r; i++) 
   {
     if (is_error_unif)
@@ -57,30 +62,31 @@ int main(int argc, char* argv[])
   cout << "- R ~ ";
   if (R != 0) {cout << R << endl;}
   else {cout << C << " / p_rep" << endl;}
-  cout << "- Expect: 1 - (1 - E[p_rep])^R ~ ";
-  if (R != 0) {cout << 1.0 - pow(1.0 - p_rep_mean_theory, R) << endl;}
-  else {cout << "1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;}
-  cout << endl;
-
-  double scale = pow(2, -scaler) / p_rep_mean_theory;
-  if (p_rep_mean_theory < pow(2, -scaler))
-  {
-    p_rep_mean_theory *= scale;
-  }
+  
+  // double scale = pow(2, -scaler) / p_rep_mean_theory;
+  // if (p_rep_mean_theory < pow(2, -scaler))
+  // {
+  //   p_rep_mean_theory *= scale;
+  // }
   
   if (R == 0) 
   {
     R = C / p_rep_mean_theory;
   }
 
-  experiment(is_error_unif, R, ell, b, r, repeat);
+  cout << "- Expect: 1 - (1 - E[p_rep])^R ~ ";
+  cout << 1.0 - pow(1.0 - p_rep_mean_theory, R) << endl;
+  // else {cout << "1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;}
+  cout << endl;
+
+  experiment(is_error_unif, R, ell, b, r, repeat, scaler);
 
   return 0;
 }
 
 void experiment(
   bool is_error_unif, size_t R, 
-  double ell, double b, size_t r, size_t repeat)
+  double ell, double b, size_t r, size_t repeat, double scaler)
 {
   random_device rd;
   mt19937 gen(rd());
@@ -92,7 +98,7 @@ void experiment(
   vector<double> error(r);
   for (size_t k = 0; k < repeat; k++) 
   {
-    double p_rep = 1;
+    double p_rep = scaler;
     for (size_t i = 0; i < r; i++)
     {
       error[i] = is_error_unif ? unif_sampler(gen) : normal_sampler(gen);

@@ -3,57 +3,502 @@
 #include <iostream>
 #include <iomanip>
 #include <random>
+#include <string>
 
 using namespace std;
 
+using list = vector<pair<secret, vector<double>>>;
+
+vector<double> list_sizes;
+vector<double> collision_numbers;
+
+set<secret> NCF_lsh(
+  bool unif, double error_param,
+  domain dom, list& L, double ell, int h,
+  double block_length, uint64_t C,
+  size_t& collision_nums, bool verbose);
+
+void gen_noisy_instance(
+  const int m, const int d, const int h, const double stddev, const domain& q,
+  matrix& M, matrix& B, vector<int64_t>& s, vector<double>& e);
+
+list sparse_secret_list_full(matrix& Mtrans, uint32_t m, uint32_t d, uint32_t w);
+
+set<secret> enumerate_secrets(uint32_t d, uint32_t w);
+
 int main(int argc, char* argv[])
 {
-  uint32_t d, h, w;
-  uint64_t q;
-  double l;
-
   cmdline::parser parser;
 
-  parser.add<uint32_t>("d", 'd', "Dimension (r^(i-1) in paper)", true, 20);
-  parser.add<uint32_t>("h", 'h', "Secret weight (w^(i-1) in paper)", true, 0);
-  parser.add<uint32_t>("w", 'w', "Guess weight (w^i in paper)", true, 0);
-  parser.add<double>("l", 'l', "Constraint bound (ell^(i) in paper)", true, 0);
-  parser.add<uint64_t>("q", 'q', "Modulus param that determines the domain", false, 2048);
+  parser.add<uint32_t>("m", 'm', "matrix dimension", true, 0);
+  parser.add<uint32_t>("d", 'd', "secret dimension", true, 0);
+  parser.add<uint32_t>("h", 'h', "secret weight", true, 0);
+  parser.add<double>("stddev", '\0', "error stddev", false, 1);
+  parser.add<uint64_t>("q", 'q', "modulus param", false, 2048);  
+
+  parser.add<uint32_t>("t", 't', "level t", false, 1);
+  parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
+  parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
+
+  parser.add<uint64_t>("repeat", '\0', "repetition", false, 1);
 
   parser.parse_check(argc, argv);
 
-  d = parser.get<uint32_t>("d");
-  h = parser.get<uint32_t>("h");
-  w = parser.get<uint32_t>("w");
-  q = parser.get<uint64_t>("q");
-  l = parser.get<double>("l");
+  // LWE parameters
+  auto m = parser.get<uint32_t>("m");
+  auto d = parser.get<uint32_t>("d");
+  auto h = parser.get<uint32_t>("h");
+  auto stddev = parser.get<double>("stddev");
+  auto q0 = parser.get<uint64_t>("q");
 
-  auto m = d;
-  
-  UniformTest unif_test(d, 1, q, h, m, true);
-  matrix B = unif_test.B;
-  auto GSnorm = unif_test.GSnorm;
-  matrix M; secret s; vector<double> e;
-  unif_test.gen_noisy_instance(M, s, e);
-  auto Mtrans = transpose(M);
+  // Attack parameters  
+  auto t = parser.get<uint32_t>("t");
+  auto C = parser.get<uint32_t>("C");
+  auto rhf = parser.get<double>("rhf");
 
-  /**
-   * 1. Top level list construction
-   * 2. Near-collision
-   * 3. Weight-Check 
-  */
-
-  auto top_pair = unif_test.sparse_secret_list(Mtrans, d, h/4);
-  map<vector<double>, secret> mapping;
-  vector<domain> top_Ms;
-  for (auto &pair: top_pair)
-  {
-    mapping[pair.second] = pair.first;
+  vector<double> q(m);
+  for (int i = 0; i < m; i++) {
+    q[m-i-1] = q0 * pow(rhf, i);
   }
-  NearCollisionTest nc_test(r, q, e, unif, lsh_dim, lsh_length, iteration_multiple);
-  auto sol = nc_test.lsh_based_search(top_Ms);
 
-  // 미완
+  vector<double> ell(t+1);
+  vector<double> b(t+1);
+  ell[0] = 6*stddev;
+  b[0] = 0; // dummy; never used
+  for (size_t i = 1; i <= t; i++) 
+  {
+    ell[i] = 3*ell[i-1];
+    b[i] = 1.5*ell[i-1];
+    // b[i] = ell[i];
+  }
+
+  vector<uint32_t> w(t+1);
+  w[0] = h;
+  for (size_t i = 1; i <= t; i++)
+  {
+    std::cout << "Insert w[" << i << "]: "; 
+    cin >> w[i];
+    auto eps = w[i] - w[i-1]/2;
+    if (eps < 0)
+      throw invalid_argument("w[i] < w[i-1]/2, fail");
+    if ((i != t) && (w[i] % 2 != 0))
+      throw invalid_argument("Intermediate level w[i] should be even");
+    if (eps > d - w[i-1])
+      throw invalid_argument("w[i] > d - w[i-1]/2, fail");
+  }
+
+  vector<uint64_t> R(t+1);
+  R[0] = 0; // dummy: never used
+  for (size_t i = 1; i <= t; i++)
+  {
+    R[i] = ambiguity(d, w[i-1], w[i]); 
+  }
+
+  vector<int> r(t+1);
+  vector<double> p_rep(t+1);
+  vector<double> vol_ratio(t+1);
+  r[0] = m;
+  for (size_t i = 1; i <= t; i++)
+  {
+    r[i] = 0;
+    p_rep[i] = 1;
+    double cur_prob = 1;
+    vol_ratio[i] = 1;
+    while (true)
+    {
+      double cur_len = min(q[m-r[i]-1], 2*ell[i]);
+      double cur_ratio = cur_len / q[m-r[i]-1];
+      if (i == 1)
+        cur_prob = cur_ratio * prob_admissible_gaussian(stddev, cur_len);
+      else
+        cur_prob = cur_ratio * prob_admissible_uniform(ell[i-1], cur_len);
+      if (R[i] * p_rep[i] * cur_prob > 2*C) 
+      {
+        p_rep[i] *= cur_prob;
+        vol_ratio[i] *= cur_ratio;
+        r[i] += 1;
+      }
+      else break;
+      if (r[i] == r[i-1]) break;
+    }
+    if (r[i] == 0) 
+      throw invalid_argument("Cannot set projection dimension r[i]");
+  }
+
+  
+  vector<double> expected_list_size(t+1);
+  for (size_t i = 1; i <= t; i++) 
+  {
+    uint64_t list_size = binom(d, w[i]) * (1ull << w[i]);
+    double vol_ratio = 1;
+    for (size_t j = 1; j <= r[i]; j++) 
+    {
+      double cur_len = min(q[m-j], 2*ell[i]);
+      vol_ratio *= q[m-j] / cur_len;
+    }
+    expected_list_size[i] = (double) list_size / vol_ratio;
+  }
+
+  std::cout << "---------- Parms ----------" << endl;
+  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << endl;
+  std::cout << "   w, r, ell, b" << endl;
+  for (size_t i = 0; i <= t; i++) {
+    std::cout << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << endl;
+  }
+  std::cout << "---------------------------" << endl;
+  std::cout << "   R, R*p_rep/2" << endl;
+  for (size_t i = 1; i <= t; i++) {
+    std::cout << i << ": " << R[i] << ", " << R[i] * p_rep[i] / 2 << endl; 
+  }
+  // std::cout << "   Reduction prob " << endl;
+  // for (size_t i = 1; i <= t; i++) {
+  //   std::cout << i << ": " << 1.0 - pow(1-p_rep[i], R[i]/2) << endl;
+  // }
+  std::cout << "---------------------------" << endl;
+  std::cout << "   L[i] (Expected)" << endl;
+  for (size_t i = 1; i <= t; i++) 
+    std::cout << i << ": " << (double) expected_list_size[i] << endl;
+  std::cout << endl;
+
+  auto repeat = parser.get<uint64_t>("repeat");
+
+  int success_count = 0;
+  int unwanted_count = 0;
+  bool verbose = true;
+  list_sizes.resize(t+1);
+  collision_numbers.resize(t+1);
+
+  auto candidate_S_global = enumerate_secrets(d, w[t]);
+
+  for (size_t iter = 0; iter < repeat; iter++) 
+  {
+    if (iter > 0) 
+    {
+      std::cout << "... Runnning " << iter << "-th, until now " 
+      << success_count << " successes" << '\r' << std::flush;
+    }
+    
+    matrix M; matrix B; secret s; vector<double> e;
+    gen_noisy_instance(
+      m, d, h, stddev, q, 
+      M, B, s, e);
+    auto Mtrans = transpose(M);
+
+    // Sanity check
+    // auto MsB = matmul(Mtrans, s);
+    // MsB = babaiNP(MsB, B);
+    // print(MsB); print(e);
+
+    // std::cout << "- Answer Secret: ";
+    // print(s);
+
+    auto candidate_S = candidate_S_global;
+
+    for (int i = t; i >= 1; i--) 
+    {
+      if (verbose)
+      {
+        std::cout << "Level " << i << endl;
+        std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
+      }
+
+      list L;
+      if (i == t)
+      {
+        for (auto s_cand: candidate_S)
+        {
+          auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[t-1]);
+          if (inf_norm(Ms, r[t-1] - r[t]) < ell[t]) 
+            L.push_back(make_pair(s_cand, Ms));
+        }
+      }
+      else 
+      {
+        for (auto s_cand: candidate_S)
+        {
+          auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[i-1]);
+          L.push_back(make_pair(s_cand, Ms));
+        }
+      }
+
+      list_sizes[i] += L.size();
+      
+      domain dom(r[i-1]);
+      for (int k = 0; k < r[i-1] - r[i]; k++) 
+        {dom[k] = q[m - r[i-1] + k];}
+      for (int k = r[i-1] - r[i]; k < r[i-1]; k++) 
+        {dom[k] = ell[i];}
+      
+      if (verbose)
+      {
+        std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
+        << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
+        << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
+      }
+      
+      size_t collision_nums = 0;
+
+      if (i != 1) 
+        candidate_S = NCF_lsh(true, ell[i-1], dom, L, ell[i-1], w[i-1], b[i], C, collision_nums, verbose);
+      else 
+        candidate_S = NCF_lsh(false, stddev, dom, L, ell[i-1], w[i-1], b[i], C, collision_nums, verbose);
+
+      collision_numbers[i] += collision_nums;
+
+      if (verbose) std::cout << endl;
+    }
+
+    if (candidate_S.size() != 0)
+    {
+      if (find(candidate_S.begin(), candidate_S.end(), s) != candidate_S.end())
+        success_count++;
+      if (candidate_S.size() > 2) 
+        unwanted_count++;
+    }
+
+    if (iter == 0) verbose = false;
+  }
+
+  std::cout << "----------- Stats for " << repeat << " runs-----------------" << endl;
+  std::cout << "Success prob: " << (double) success_count / repeat
+        << " (# multiple sol: " << (double) unwanted_count /repeat << ")" << endl;
+  std::cout << "    L[i], #cols" << endl;
+  for (size_t i = 1; i <= t; i++) 
+    std::cout << i << ": " << (double) list_sizes[i] / repeat << ", " 
+        << (double) collision_numbers[i] / repeat << endl;
+  std::cout << endl;
 
   return 0;
 }
+
+set<secret> NCF_lsh(
+  bool unif, double error_param,
+  domain dom, list& L, double ell, int h,
+  double block_length, uint64_t C,
+  size_t& collision_nums, bool verbose)
+{
+  auto r = dom.size();
+
+  vector<int> n(r);
+  vector<double> b(r);
+
+  double p_good = 1;
+  double p_bad = 1;
+  for (size_t i = 0; i < r; i++) {
+    n[i] = max(1, (int) floor(dom[i] / block_length));
+    b[i] = (double) dom[i] / n[i];
+    if (n[i] > 1) 
+    {
+      if (unif) {p_good *= prob_admissible_uniform(error_param, b[i]);}
+      else {p_good *= prob_admissible_gaussian(error_param, b[i]);}
+    }
+    p_bad *= 1.0 / n[i];
+    // std::cout << i << ": " << dom[i] << endl;
+    // std::cout << n[i] << ", " << b[i] << ", " << p_good << ", " << p_bad << endl;
+  }
+
+  uint64_t R = C / p_good;
+  
+  if (verbose)
+  {
+    std::cout << "  - One LSH succeeds with " << p_good << " probability -> " << R << " torus-LSH iterations" << endl;
+    std::cout << "  - (False) near-collision prob p_bad = " << p_bad << endl;
+  }
+
+  random_device rd;
+  mt19937 gen(rd());
+
+  set<secret> sol;
+  
+  for (size_t iter = 0; iter < R; iter++)
+  {
+    // Pick torus-LSH by starting points
+    vector<double> lsh_starts(r);
+    for (size_t i = 0; i < r; i++) {
+      uniform_real_distribution<double> lsh_random_starts(0, b[i]);
+      lsh_starts[i] = lsh_random_starts(gen);
+    }
+
+    // Fill LSH table
+    map<vector<int32_t>, list> hash_table;
+    for (auto s_Ms: L) {
+      auto Ms = s_Ms.second;
+      std::vector<int32_t> address(r);
+      for (size_t i = 0; i < r; i++) {
+        int32_t a = floor((Ms[i] + dom[i] - lsh_starts[i]) / b[i]);
+        address[i] = a % n[i];
+      }
+      if (hash_table.count(address) != 0) {
+        hash_table[address].push_back(s_Ms);
+      }
+      else {
+        list s_Ms_copy{s_Ms};
+        hash_table[address] = s_Ms_copy;
+      }
+    }
+
+    for (auto &iterator: hash_table) 
+    {
+      auto bin = iterator.second;
+      auto N = bin.size();
+      for (size_t i = 0; i < N; i++) 
+      {
+        for (size_t j = i+1; j < N; j++) {
+          collision_nums++;
+          auto norm_check = subvec(bin[i].second, bin[j].second);
+          if (inf_norm(norm_check) <= ell) 
+          {
+            auto weight_check = sub(bin[i].first, bin[j].first);
+            if (weight_ternary_check(weight_check, h))
+            {
+              sol.insert(weight_check);
+              // Symmetry
+              secret zero(weight_check.size());
+              weight_check = sub(zero, weight_check);
+              sol.insert(weight_check);
+            }
+          }
+        }
+      }
+    }
+  }
+  return sol;
+};
+
+void gen_noisy_instance(
+  const int m, const int d, const int h, const double stddev, const domain& q,
+  matrix& M, matrix& B, vector<int64_t>& s, vector<double>& e)
+{
+  random_device rd;
+  mt19937 gen(rd());
+  vector<uniform_real_distribution<double>> coord_sampler(m);
+
+  B.resize(m);
+  for (size_t i = 0; i < m; i++) {
+    B[i].resize(m);
+  }
+  for (size_t j = 0; j < m; j++) {
+    B[j][j] = q[j];
+    coord_sampler[j] = uniform_real_distribution<double>(-q[j]/2, q[j]/2);
+    for (size_t i = 0; i < j; i++) {
+      B[i][j] = coord_sampler[j](gen);
+    }
+  }
+  
+  matrix A;
+  A.resize(m);
+  for (size_t i = 0 ; i < m; i++) {
+    A[i].resize(d-1);
+    coord_sampler[i] = uniform_real_distribution<double>(-q[i]/2, q[i]/2);
+    for (size_t j = 0; j < d-1; j++) {
+      A[i][j] = coord_sampler[i](gen);
+    }
+  }
+
+  s.resize(d-1);
+  uniform_int_distribution<int64_t> binrand(0, 1);
+  for (size_t i = 0; i < h-1; i++) {
+    s[i] = 2*binrand(gen)-1;
+  }
+  for (size_t i = h-1; i < d-1; i++) {
+    s[i] = 0;
+  }
+  shuffle(begin(s), end(s), gen);
+  s.push_back(1);
+
+  vector<double> b(m);
+  for (size_t k = 0; k < d-1; k++) {
+    if (s[k] != 0) {
+      for (size_t i = 0; i < m; i++) {
+        b[i] += s[k] * A[i][k];
+      }
+    }
+  }
+
+  e.resize(m);
+  normal_distribution<double> gaussian_noise(0, stddev);
+  for (size_t k = 0; k < m; k++) {
+    e[k] = gaussian_noise(gen);
+    b[k] += e[k];
+  }
+  b = babaiNP(b, B);
+  
+  M.resize(m);
+  for (size_t i = 0; i < m; i++) {
+    M[i].resize(d);
+    for (size_t j = 0; j < d-1; j++) {
+      M[i][j] = -A[i][j];
+    }
+    M[i][d-1] = b[i];
+  }
+};
+
+list sparse_secret_list_full(
+  matrix& Mtrans, uint32_t m, uint32_t d, uint32_t w) 
+{
+  vector<pair<secret, vector<double>>> R;
+  if (d == 0 | d < w) {
+    return R;
+  }
+  else if (w == 0) {
+    R.push_back(make_pair(vector<int64_t>(d), vector<double>(m)));
+    return R;
+  }
+  else if (d == 1 && w == 1) {
+    R.push_back(make_pair(vector<int64_t>{1}, Mtrans[0]));
+    vector<double> zerovec(m);
+    R.push_back(make_pair(vector<int64_t>{-1}, subvec(zerovec, Mtrans[0])));
+    return R;
+  }
+  else {
+    auto R1 = sparse_secret_list_full(Mtrans, m, d-1, w-1);
+    auto R2 = sparse_secret_list_full(Mtrans, m, d-1, w);
+
+    for (size_t i = 0; i < R1.size(); i++) {
+      auto v = R1[i].first;
+      v.push_back(1);
+      R.push_back(make_pair(v, addvec(R1[i].second, Mtrans[d-1])));
+      v[d-1] = -1;
+      R.push_back(make_pair(v, subvec(R1[i].second, Mtrans[d-1])));
+    }
+    for (size_t i = 0; i < R2.size(); i++) {
+      auto v = R2[i].first;
+      v.push_back(0);
+      R.push_back(make_pair(v, R2[i].second));
+    }
+    return R;
+  }
+};
+
+set<secret> enumerate_secrets(uint32_t d, uint32_t w) 
+{
+  set<secret> R;
+  if (d == 0 | d < w) {
+    return R;
+  }
+  else if (w == 0) {
+    R.insert(vector<int64_t>(d));
+    return R;
+  }
+  else if (d == 1 && w == 1) {
+    R.insert(vector<int64_t>{1});
+    R.insert(vector<int64_t>{-1});
+    return R;
+  }
+  else {
+    auto R1 = enumerate_secrets(d-1, w-1);
+    auto R2 = enumerate_secrets(d-1, w);
+
+    for (auto v: R1) {
+      v.push_back(1);
+      R.insert(v);
+      v[d-1] = -1;
+      R.insert(v);
+    }
+    for (auto v: R2) {
+      v.push_back(0);
+      R.insert(v);
+    }
+    return R;
+  }
+};

@@ -6,7 +6,7 @@
 #include <map>
 #include <random>
 
-// ./unif_test -d 20 -h 8 -l 0.5 -q 4
+// ./ncf_model_test -d 20 -h 8 -l 0.5 -q 4
 
 using namespace std;
 
@@ -73,4 +73,3 @@ int main(int argc, char* argv[]) {
 
   return 0;
 }
-

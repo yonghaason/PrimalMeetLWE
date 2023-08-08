@@ -14,34 +14,40 @@ int main(int argc, char* argv[]) {
   
   chrono::system_clock::time_point start, end;
 
-  uint32_t d, h; 
-  uint64_t q;
-  double l;
-
   cmdline::parser parser;
 
-  parser.add<uint32_t>("d", 'd', "Dimension (r^(i-1) in paper)", true, 20);
-  parser.add<uint32_t>("h", 'h', "Secret weight (w^(i-1) in paper)", true, 0);
-  parser.add<double>("l", 'l', "Constraint bound (ell^(i) in paper)", true, 0);
-  parser.add<uint64_t>("q", 'q', "Modulus param that determines the domain", false, 2048);
+  parser.add<uint32_t>("m", 'm', "matrix dimension", true, 0);
+  parser.add<uint32_t>("d", 'd', "secret dimension", true, 20);
+  parser.add<uint32_t>("h", 'h', "secret weight", true, 0);
+  parser.add<double>("l", 'l', "box length [-l, l]", true, 0);
+  parser.add<double>("stddev", '\0', "error stddev", false, 1);
+  parser.add<double>("q", 'q', "modulus param", false, 2048);
+  parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
 
   parser.parse_check(argc, argv);
 
-  d = parser.get<uint32_t>("d");
-  h = parser.get<uint32_t>("h");
-  q = parser.get<uint64_t>("q");
-  l = parser.get<double>("l");
+  auto m = parser.get<uint32_t>("m");
+  auto d = parser.get<uint32_t>("d");
+  auto h = parser.get<uint32_t>("h");  
+  auto l = parser.get<double>("l");
+  auto stddev = parser.get<double>("stddev");
+  auto q0 = parser.get<double>("q");
+  auto rhf = parser.get<double>("rhf");
 
-  auto m = d;
-    
-  UniformTest unif_test(d, 1, q, h, m, true);
-  matrix B = unif_test.B;
-  auto GSnorm = unif_test.GSnorm;
-  matrix M; secret s; vector<double> e;
-  unif_test.gen_noisy_instance(M, s, e);
+  vector<double> q(m);
+  for (int i = 0; i < m; i++) {
+    q[m-i-1] = q0 * pow(rhf, i);
+  }
+
+  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << endl;
+
+  matrix M; matrix B; secret s; vector<double> e;
+  gen_noisy_instance(
+    m, d, h, stddev, q, 
+    M, B, s, e);
   auto Mtrans = transpose(M);
 
-  auto Ms_list = unif_test.sparse_secret_list(Mtrans, d, h);
+  auto Ms_list = sparse_secret_list(Mtrans, m, d, h);
 
   cout << "Ms_list.size() = " << Ms_list.size() << endl;
 
@@ -60,9 +66,9 @@ int main(int argc, char* argv[]) {
   double vol_ratio = 1;
   for (size_t i = 0; i < m; i++)
   {
-    if (GSnorm[i] > 2*l) 
+    if (q[i] > 2*l) 
     {
-      vol_ratio *= (2*l / GSnorm[i]);
+      vol_ratio *= (2*l / q[i]);
     }
   }
 

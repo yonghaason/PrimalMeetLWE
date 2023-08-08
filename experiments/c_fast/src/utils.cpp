@@ -65,12 +65,14 @@ matrix transpose(matrix& M) {
 }
 
 uint64_t binom(uint32_t n, uint32_t k) {
+  if (n == 0) return 1;
   if (k == n || k == 0) return 1;
   return binom(n - 1, k - 1) + binom(n - 1, k);
 };
 
-uint64_t ambiguity(uint32_t n, uint32_t h, uint32_t w) {  
-  auto eps = w - (h+1) / 2;
+uint64_t ambiguity(uint32_t n, uint32_t h, uint32_t w) {
+  assert(h % 2 == 0);
+  auto eps = w - h/2;
   return binom(h, w - eps) * binom(n - h, eps) * (1ull << eps);
 };
 
@@ -122,18 +124,22 @@ void fmodvec(vector<double>& v, domain& GSnorm, bool balanced) {
   }
 }
 
-vector<double> babaiNP(const vector<double>& v, matrix B) {
+vector<double> babaiNP(const vector<double>& v, matrix B, int r) {
+  // NOT optimized yet
   assert(v.size() == B.size());
+  int m = B.size();
+  if (r == -1) r = m;
   vector<double> v_reduced(v);
-  for (int i = B.size()-1; i >= 0; i--) 
+  for (int i = m-1; i >= m-r; i--) 
   {
     int coeff = round(v_reduced[i] / B[i][i]);
-    for (int j = i; j >= 0; j--)
+    for (int j = i; j >= m-r; j--)
     {
       v_reduced[j] -= coeff * B[j][i];
     }
   }
-  return v_reduced;
+  vector<double> result(v_reduced.begin() + m - r, v_reduced.end());
+  return result;
 }
 
 uint32_t hamming_weight(secret& v) {
@@ -167,15 +173,3 @@ void print(vector<double>& v) {
   }
   cout << v[v.size()-1] << "]" << endl;
 }
-
-// void print_list(my_list L) {
-//   for (size_t i = 0; i < L.size(); i++) {
-//     auto v = L[i].first;
-//     cout << "[";
-//     for (size_t k = 0; k < v.size(); k++){
-//       cout << v[k] << ", ";
-//     } 
-//     cout << "]" << endl;
-//   }
-//   cout << endl;
-// }

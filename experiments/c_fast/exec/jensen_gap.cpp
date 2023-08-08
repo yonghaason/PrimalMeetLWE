@@ -63,12 +63,6 @@ int main(int argc, char* argv[])
   if (R != 0) {cout << R << endl;}
   else {cout << C << " / p_rep" << endl;}
   
-  // double scale = pow(2, -scaler) / p_rep_mean_theory;
-  // if (p_rep_mean_theory < pow(2, -scaler))
-  // {
-  //   p_rep_mean_theory *= scale;
-  // }
-  
   if (R == 0) 
   {
     R = C / p_rep_mean_theory;
@@ -76,7 +70,6 @@ int main(int argc, char* argv[])
 
   cout << "- Expect: 1 - (1 - E[p_rep])^R ~ ";
   cout << 1.0 - pow(1.0 - p_rep_mean_theory, R) << endl;
-  // else {cout << "1 - exp(-" << C << ") = " << 1 - exp((double) -C) << endl;}
   cout << endl;
 
   experiment(is_error_unif, R, ell, b, r, repeat, scaler);
@@ -121,8 +114,6 @@ void experiment(
   cout << "- p_rep range : [" << p_rep_min << ", " << p_rep_max << "] = " 
        << "[2^" << log2(p_rep_min) << ", 2^" << log2(p_rep_max) << "]" << ")" << endl;
   cout << "- E[p_rep] : " << p_rep_mean << " (=2^" << log2(p_rep_mean) << ")" << endl;
-  // cout << "- s[p_rep] : " << sqrt(p_rep_var) 
-  //      << " (=2^" << 0.5*log2(p_rep_var) << ")" << endl;
   cout << "- E[1 - (1 - p_rep)^R] : " << 1 - acc << " (=2^" << log2(1 - acc) << ")" << endl;
   cout << "- E[exp(R*p_rep)] : " << 1 - acc2 << " (=2^" << log2(1 - acc2) << ")" << endl;
 }

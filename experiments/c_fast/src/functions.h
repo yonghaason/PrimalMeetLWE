@@ -5,109 +5,16 @@
 
 using namespace std;
 
-///////////////////////////////////////////////////////////////////////
-/* Tests for Torus LSH-based near-collision finding */
-///////////////////////////////////////////////////////////////////////
+void gen_noisy_instance(
+  const int m, const int d, const int h, const double stddev, const domain& q,
+  matrix& M, matrix& B, vector<int64_t>& s, vector<double>& e);
 
-class NearCollisionTest {
-public:  
-  NearCollisionTest(uint32_t r, uint64_t q, double e, bool unif, uint32_t lsh_dim, double lsh_length, uint32_t iter_mult);
+list sparse_secret_list(matrix& Mtrans, uint32_t m, uint32_t d, uint32_t w);
 
-  vector<vector<double>> gen_instance(
-    size_t near_collision_num, size_t output_size = 0);
+set<secret> enumerate_secrets(uint32_t d, uint32_t w);
 
-  set<vector<double>> lsh_based_search(
-    vector<vector<double>>& L);
-
-  domain dom;
-
-private:
-  uint32_t r; // dimension
-  double e; // stddev if gaussian, error bound if unif
-  bool unif; // error is unif or gaussian
-  uint32_t lsh_dim;
-  double lsh_length;
-  uint32_t iter_mult;
-  vector<size_t> box_num;
-  vector<double> lsh_lengths;
-  double p_good = 1;
-};
-
-///////////////////////////////////////////////////////////////////////
-/* Uniformity Tests */
-///////////////////////////////////////////////////////////////////////
-
-class UniformTest {
-public:
-  UniformTest(
-    uint32_t n, double e, uint64_t q,
-    uint32_t h, uint32_t m, bool unif);
-
-  // Genearate instance M of size m X n and s of HW h
-  // such that [Ms]_B = error sampled from D_e (error distribution).
-  void gen_noisy_instance(
-    matrix& M, vector<int64_t>& s, vector<double>& error);
-  
-  void gen_noisy_instance_fixed_error(
-    matrix& M, vector<int64_t>& s, const vector<double>& error);
-
-  /* Output {(s, Ms): HW(s) = w} */
-  vector<pair<secret, vector<double>>> sparse_secret_list(
-    matrix& Mtrans, uint32_t d, uint32_t w);
-
-  /* Output {s: HW(s) = w} */
-  vector<secret> enumerate_secrets(uint32_t d, uint32_t w);
-
-  matrix B;
-  domain GSnorm;
-
-  uint32_t m; // # Sample
-  uint32_t n; // LWE dim
-  uint32_t h; // secret weight
-  double e; // stddev if gaussian, error bound if unif
-  bool unif; // error is unif or gaussian
-};
-
-///////////////////////////////////////////////////////////////////////
-/* Tests for the correctness of constraint setting */
-///////////////////////////////////////////////////////////////////////
-
-class ConstraintTest : public UniformTest {
-public:
-  ConstraintTest(
-    uint32_t n, double e, uint64_t q,
-    uint32_t h, uint32_t m, bool unif) 
-  : UniformTest(n, e, q, h, m, unif) {};
-
-  /* Output the largest projection dimension r of given domain D,
-  such that "ambiguity * p_rep > target_pair_num" 
-  where "p_rep = Pr[x and x + e both in pi_r(D)]" */
-  void set_constraint_dim(uint32_t guess_weight, double box_length, uint32_t target_pair_num = 1);
-
-  void set_constraint_dim_worst(uint32_t guess_weight, double constraint_bound, uint32_t error_bound, uint32_t target_pair_num = 1);
-
-  /* Output {(s, Ms): HW(s) = w, ||pi_r(Ms)||_inf <= l} */
-  vector<pair<secret, vector<double>>> build_list(
-    matrix& M, uint32_t guess_weight, double box_length);
-
-  set<pair<secret, secret>> check_near_collision(
-    vector<pair<secret, vector<double>>>& L, secret& s, uint32_t guess_weight);
-
-  set<pair<secret, secret>> fast_check_near_collision(
-    matrix& M, secret& s, vector<double>& e, 
-    vector<secret>& partial_list, uint32_t guess_weight, double box_length);
-
-  uint32_t new_check_near_collision(
-    matrix& M, secret& s, vector<double>& e, 
-    uint32_t guess_weight, double constraint_bound);
-
-  void recur_check(
-    uint32_t& count, matrix& Mtrans, vector<double>& e, secret& s, double& constraint_bound, 
-    vector<int32_t>& nonzeroidx, vector<int32_t>& sign, vector<double>& Ms1, // vector<size_t>& arr, vector<size_t>& idx, 
-    uint32_t start, uint32_t end, uint32_t cur_hw, uint32_t& k);
-
-  uint64_t proj_dim;
-  double p_rep_avg;
-  double p_rep_wst;
-  double vol_ratio;
-};
+set<secret> NCF_lsh(
+  bool unif, double error_param,
+  domain dom, list& L, double ell, int h,
+  double block_length, uint64_t C,
+  size_t& collision_nums, bool verbose);

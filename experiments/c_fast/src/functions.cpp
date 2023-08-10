@@ -145,35 +145,17 @@ set<secret> enumerate_secrets(uint32_t d, uint32_t w)
 };
 
 set<secret> NCF_lsh(
-  bool unif, double error_param,
   domain dom, list& L, double ell, int h,
-  double block_length, uint64_t C,
-  size_t& collision_nums, bool verbose)
+  double block_length, uint64_t R_lsh,
+  size_t& collision_nums)
 {
   auto r = dom.size();
 
   vector<int> n(r);
-  vector<double> b(r);
-
-  double p_good = 1;
-  double p_bad = 1;
+  vector<double> b(r);  
   for (size_t i = 0; i < r; i++) {
     n[i] = max(1, (int) floor(dom[i] / block_length));
     b[i] = (double) dom[i] / n[i];
-    if (n[i] > 1) 
-    {
-      if (unif) {p_good *= prob_admissible_uniform(error_param, b[i]);}
-      else {p_good *= prob_admissible_gaussian(error_param, b[i]);}
-    }
-    p_bad *= 1.0 / n[i];
-  }
-
-  uint64_t R = C / p_good;
-  
-  if (verbose)
-  {
-    std::cout << "  - One LSH succeeds with " << p_good << " probability -> " << R << " torus-LSH iterations" << endl;
-    std::cout << "  - (False) near-collision prob p_bad = " << p_bad << endl;
   }
 
   random_device rd;
@@ -181,7 +163,7 @@ set<secret> NCF_lsh(
 
   set<secret> sol;
   
-  for (size_t iter = 0; iter < R; iter++)
+  for (size_t iter = 0; iter < R_lsh; iter++)
   {
     // Pick torus-LSH by starting points
     vector<double> lsh_starts(r);

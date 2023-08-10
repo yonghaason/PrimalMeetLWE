@@ -3,15 +3,12 @@
 #include <iostream>
 #include <iomanip>
 #include <random>
-#include <string>
+#include <chrono>
 
 using namespace std;
 
-vector<double> list_sizes;
-vector<double> collision_numbers;
-
 int main(int argc, char* argv[])
-{
+{ 
   cmdline::parser parser;
 
   parser.add<uint32_t>("m", 'm', "matrix dimension", true, 0);
@@ -24,7 +21,7 @@ int main(int argc, char* argv[])
   parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
 
-  parser.add<uint64_t>("repeat", '\0', "repetition", false, 1);
+  parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 1);
 
   parser.parse_check(argc, argv);
 
@@ -39,6 +36,8 @@ int main(int argc, char* argv[])
   auto t = parser.get<uint32_t>("t");
   auto C = parser.get<uint32_t>("C");
   auto rhf = parser.get<double>("rhf");
+
+  auto repeat = parser.get<uint64_t>("repeat");
 
   vector<double> q(m);
   for (int i = 0; i < m; i++) {
@@ -109,7 +108,36 @@ int main(int argc, char* argv[])
       throw invalid_argument("Cannot set projection dimension r[i]");
   }
 
-  
+  vector<uint64_t> R_lsh(t+1);
+  vector<double> p_goods(t+1);
+  vector<double> p_bads(t+1);
+  for (int i = t; i >= 1; i--)
+  {  
+    domain dom(r[i-1]);
+    for (int k = 0; k < r[i-1] - r[i]; k++) 
+      {dom[k] = q[m - r[i-1] + k];}
+    for (int k = r[i-1] - r[i]; k < r[i-1]; k++) 
+      {dom[k] = ell[i];}
+
+    p_goods[i] = 1;
+    p_bads[i] = 1;
+
+    vector<int> n_tmp(r[i-1]);
+    vector<double> b_tmp(r[i-1]);
+    for (size_t k = 0; k < r[i-1]; k++) {
+      n_tmp[k] = max(1, (int) floor(dom[k] / b[i]));
+      b_tmp[k] = (double) dom[k] / n_tmp[k];
+      if (n_tmp[k] > 1) 
+      {
+        if (i != 1) {p_goods[i] *= prob_admissible_uniform(ell[i-1], b_tmp[k]);}
+        else {p_goods[i] *= prob_admissible_gaussian(stddev, b_tmp[k]);}
+      }
+      p_bads[i] *= 1.0 / n_tmp[k];
+    }
+
+    R_lsh[i] = C/p_goods[i];
+  }
+
   vector<double> expected_list_size(t+1);
   for (size_t i = 1; i <= t; i++) 
   {
@@ -125,30 +153,42 @@ int main(int argc, char* argv[])
 
   std::cout << "---------- Parms ----------" << endl;
   std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << " (assume GSA)" << endl;
-  std::cout << "   w, r, ell, b, R, Rp/2, L" << endl;
+  std::cout << "   w, r, ell, b, R, Rp/2, R_lsh" << endl;
   std::cout << 0 << ": " << w[0] << ", " << r[0] << ", " << ell[0] << ", -, -, -, -" << endl;
   for (size_t i = 1; i <= t; i++) {
-    std::cout << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << ", " << R[i] << ", " << R[i] * p_rep[i] / 2 << ", " << (double) expected_list_size[i] << endl;
+    std::cout << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << ", " << R[i] << ", " << R[i] * p_rep[i] / 2 << ", " << R_lsh[i] << endl;
+  }
+  std::cout << endl;
+
+  std::cout << "------ Attack Procedure Overview ------ " << endl;
+  for (int i = t; i >= 1; i--)
+  {
+    std::cout << "Level " << i << endl;
+    std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
+    std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
+    << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
+    << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
+    std::cout << "  - One LSH succeeds with " << p_goods[i] << " probability -> " << R_lsh[i] << " torus-LSH iterations" << endl;
+    std::cout << "  - (False) near-collision prob p_bad = " << p_bads[i] << endl;
   }
   cout << endl;
 
-  auto repeat = parser.get<uint64_t>("repeat");
+  //////////////////////////////////////////////////////
 
   int success_count = 0;
   int unwanted_count = 0;
-  bool verbose = true;
-  list_sizes.resize(t+1);
-  collision_numbers.resize(t+1);
+  vector<double> list_sizes(t+1);
+  vector<double> collision_numbers(t+1);
+
+  auto start = chrono::steady_clock::now();
 
   auto candidate_S_global = enumerate_secrets(d, w[t]);
 
   for (size_t iter = 0; iter < repeat; iter++) 
   {
-    if (iter > 0) 
-    {
-      std::cout << "... Runnning " << iter << "-th, until now " 
+
+    std::cout << "... Runnning " << iter + 1 << "-th, until now " 
       << success_count << " successes" << '\r' << std::flush;
-    }
     
     matrix M; matrix B; secret s; vector<double> e;
     gen_noisy_instance(
@@ -163,17 +203,8 @@ int main(int argc, char* argv[])
 
     auto candidate_S = candidate_S_global;
 
-    if (verbose) 
-      std::cout << "------ Attack Procedure Overview ------ " << endl;
-
     for (int i = t; i >= 1; i--) 
     {
-      if (verbose)
-      {
-        std::cout << "Level " << i << endl;
-        std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
-      }
-
       list L;
       if (i == t)
       {
@@ -200,24 +231,10 @@ int main(int argc, char* argv[])
         {dom[k] = q[m - r[i-1] + k];}
       for (int k = r[i-1] - r[i]; k < r[i-1]; k++) 
         {dom[k] = ell[i];}
-      
-      if (verbose)
-      {
-        std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
-        << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
-        << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
-      }
-      
+          
       size_t collision_nums = 0;
-
-      if (i != 1) 
-        candidate_S = NCF_lsh(true, ell[i-1], dom, L, ell[i-1], w[i-1], b[i], C, collision_nums, verbose);
-      else 
-        candidate_S = NCF_lsh(false, stddev, dom, L, ell[i-1], w[i-1], b[i], C, collision_nums, verbose);
-
+      candidate_S = NCF_lsh(dom, L, ell[i-1], w[i-1], b[i], R_lsh[i], collision_nums);
       collision_numbers[i] += collision_nums;
-
-      if (verbose) std::cout << endl;
     }
 
     if (candidate_S.size() != 0)
@@ -227,17 +244,22 @@ int main(int argc, char* argv[])
       if (candidate_S.size() > 2) 
         unwanted_count++;
     }
-
-    if (iter == 0) verbose = false;
   }
 
-  std::cout << "----------- Stats for " << repeat << " runs-----------------" << endl;
+  auto end = chrono::steady_clock::now();
+
+  std::cout << "----------- Takes " 
+      << chrono::duration_cast<chrono::milliseconds>(end - start).count()
+      << " ms for " << repeat << " runs -----------------" << endl;
   std::cout << "Success prob: " << (double) success_count / repeat
         << " (# multiple sol: " << (double) unwanted_count /repeat << ")" << endl;
-  std::cout << "    L[i], #cols" << endl;
+  std::cout << "    L: real, expected" << endl;
   for (size_t i = 1; i <= t; i++) 
     std::cout << i << ": " << (double) list_sizes[i] / repeat << ", " 
-        << (double) collision_numbers[i] / repeat << endl;
+        << expected_list_size[i] << endl;
+  std::cout << "    #cols" << endl;
+  for (size_t i = 1; i <= t; i++) 
+    std::cout << i << ": " << (double) collision_numbers[i] / repeat << endl;
   std::cout << endl;
 
   return 0;

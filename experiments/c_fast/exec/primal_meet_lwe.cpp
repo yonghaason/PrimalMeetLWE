@@ -20,6 +20,7 @@ int main(int argc, char* argv[])
   parser.add<uint32_t>("t", 't', "level t", false, 1);
   parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
+  parser.add<bool>("top-opti", '\0', "top-level optimization toggle", false, false);
 
   parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 1);
 
@@ -36,6 +37,7 @@ int main(int argc, char* argv[])
   auto t = parser.get<uint32_t>("t");
   auto C = parser.get<uint32_t>("C");
   auto rhf = parser.get<double>("rhf");
+  auto top_opti = parser.get<bool>("top-opti");
 
   auto repeat = parser.get<uint64_t>("repeat");
 
@@ -151,6 +153,19 @@ int main(int argc, char* argv[])
     expected_list_size[i] = (double) list_size / vol_ratio;
   }
 
+  
+  size_t top_level_full_size = binom(d, w[t]) * (1ull << w[t]);
+  size_t top_level_size;
+  if (!top_opti)
+  {
+    top_level_size = top_level_full_size;
+  }
+  else
+  {
+    top_level_size = C * (double) top_level_full_size / sqrt(R[t]);
+    expected_list_size[t] = top_level_size;
+  }
+
   std::cout << "---------- Parms ----------" << endl;
   std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << " (assume GSA)" << endl;
   std::cout << "   w, r, ell, b, R, Rp/2, R_lsh" << endl;
@@ -159,12 +174,26 @@ int main(int argc, char* argv[])
     std::cout << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << ", " << R[i] << ", " << R[i] * p_rep[i] / 2 << ", " << R_lsh[i] << endl;
   }
   std::cout << endl;
+  
+  //////////////////////////////////////////////////////
+
+  int success_count = 0;
+  int unwanted_count = 0;
+  vector<double> list_sizes(t+1);
+  vector<double> collision_numbers(t+1);
 
   std::cout << "------ Attack Procedure Overview ------ " << endl;
   for (int i = t; i >= 1; i--)
   {
     std::cout << "Level " << i << endl;
-    std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
+    if ((i == t) && top_opti)
+    {
+      std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << "} of size " << top_level_size << endl;
+    }
+    else 
+    {
+      std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
+    }
     std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
     << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
     << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
@@ -173,20 +202,10 @@ int main(int argc, char* argv[])
   }
   cout << endl;
 
-  //////////////////////////////////////////////////////
-
-  int success_count = 0;
-  int unwanted_count = 0;
-  vector<double> list_sizes(t+1);
-  vector<double> collision_numbers(t+1);
-
   auto start = chrono::steady_clock::now();
-
-  auto candidate_S_global = enumerate_secrets(d, w[t]);
 
   for (size_t iter = 0; iter < repeat; iter++) 
   {
-
     std::cout << "... Runnning " << iter + 1 << "-th, until now " 
       << success_count << " successes" << '\r' << std::flush;
     
@@ -201,12 +220,33 @@ int main(int argc, char* argv[])
     // MsB = babaiNP(MsB, B);
     // print(MsB); print(e);
 
-    auto candidate_S = candidate_S_global;
-
+    set<secret> candidate_S;
+    
+    if (top_opti)
+    {
+      while (candidate_S.size() < top_level_size) 
+      {
+        set<secret> basic_secret = enumerate_secrets(w[t], w[t]);
+        vector<secret> basic_secret_vec(basic_secret.begin(), basic_secret.end());
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<int64_t> randindex(0, basic_secret_vec.size() - 1);
+        auto index = randindex(gen);
+        secret tmp(basic_secret_vec[index]);
+        tmp.resize(d);
+        random_shuffle(tmp.begin(), tmp.end());
+        candidate_S.insert(tmp);
+      }
+    }
+    else 
+    {
+      candidate_S = enumerate_secrets(d, w[t]);
+    }
+    
     for (int i = t; i >= 1; i--) 
     {
       list L;
-      if (i == t)
+      if ((i == t) && !top_opti)
       {
         for (auto s_cand: candidate_S)
         {
@@ -254,7 +294,7 @@ int main(int argc, char* argv[])
   std::cout << "Success prob: " << (double) success_count / repeat
         << " (# multiple sol: " << (double) unwanted_count /repeat << ")" << endl;
   std::cout << "    L: real, expected" << endl;
-  for (size_t i = 1; i <= t; i++) 
+  for (size_t i = 1; i <= t; i++)
     std::cout << i << ": " << (double) list_sizes[i] / repeat << ", " 
         << expected_list_size[i] << endl;
   std::cout << "    #cols" << endl;

@@ -56,20 +56,17 @@ def prettyprint(dic, filename = False):
         if keyy != 'cost' and keyy != 'guess_details':
             print('   - \'', keyy, '\': ', dic[keyy], sep = '', end='\n')
     
-    guess = dic['guess_details'][-1]
+    guess = dic['guess_details']
+    # guess = dic['guess_details'][-1]
     print('Guess details:')
-    for keyy in ['cost', 'prob']:
+    for keyy in ['cost', 'log_p_suc']:
         print('   - \'', keyy, '\': ', guess[keyy], sep = '', end='\n')
     for keyy in guess:
-        if keyy not in ['lsh_stats', 'cost', 'prob', 'level_fail'] and len(guess[keyy]) != 0:
+        if keyy not in ['lsh_stats', 'cost', 'log_p_suc', 'level_fail'] and len(guess[keyy]) != 0:
             print('   - \'', keyy, '\': ', guess[keyy], sep = '', end='\n')
     if 'level_fail' in guess:
         print('   - \'level_fail\': True', sep = '', end='\n')
-    # print('---- Further details on guess')
-    # if 'lsh_stats' in guess:
-    #     for i in range(len(guess['lsh_stats'])):
-    #         print('* lsh info of Lv', i+1, '->', i, ':', guess['lsh_stats'][i])
-
+    
     if filename is not False:
         f.close()
 
@@ -123,12 +120,12 @@ def my_binary_search(left, right, func, cur_depth, key='cost',
     vals.sort()
     val_min = vals[0]
 
-    if val_min == val_ml[key]:
+    if val_min == val_mr[key]:
         if cur_depth == max_depth:
-            return val_ml
+            return val_mr
         else:
-            return my_binary_search(left, middle, func, cur_depth+1, key, 
-                    val_l = val_l, val_m = val_ml, val_r = val_m, max_depth = max_depth)
+            return my_binary_search(middle, right, func, cur_depth+1, key, 
+                    val_l = val_m, val_m = val_mr, val_r = val_r, max_depth = max_depth)
     elif val_min == val_m[key]:
         if cur_depth == max_depth:
             return val_m
@@ -137,10 +134,10 @@ def my_binary_search(left, right, func, cur_depth, key='cost',
                     val_l = val_ml, val_m = val_m, val_r = val_mr, max_depth = max_depth)
     else:
         if cur_depth == max_depth:
-            return val_mr
+            return val_ml
         else:
-            return my_binary_search(middle, right, func, cur_depth+1, key, 
-                    val_l = val_m, val_m = val_mr, val_r = val_r, max_depth = max_depth)
+            return my_binary_search(left, middle, func, cur_depth+1, key, 
+                    val_l = val_l, val_m = val_ml, val_r = val_m, max_depth = max_depth)
 
 ##################################################
 #                Lattices
@@ -171,14 +168,14 @@ def delta_0(beta):
         return float(beta / (2 * pi * e) * (pi * beta) ** (1 / beta)) ** (1 / (2 * (beta - 1)))
 
 
-def log_BKZ_cost(d, beta, C=5.46):
-    svp_calls = C * max(d - beta, 1)
+def log_BKZ_cost(d, beta, model="MATZOV22"):    
     beta_ = beta - d4f(beta)
-    # Old one from ADPS16
-    # gate_count = C * 2 ** (0.2988026130564745 * beta_ + 26.011121212891872)
-    # New one from MATZOV22
-    gate_count = C * 2 ** (0.29613500308205365 * beta_ + 20.387885985467914)
-    return log2(LLL(d) + svp_calls * gate_count)
+    if model == "ADPS16":
+        return 0.292 * beta_
+    if model == "MATZOV22":
+        svp_calls = 5.46 * max(d - beta, 1)
+        gate_count = 5.46 * 2 ** (0.29613500308205365 * beta_ + 20.387885985467914)
+        return log2(LLL(d) + svp_calls * gate_count)
 
 def d4f(beta):
     """
@@ -203,21 +200,21 @@ def LLL(d, B=None):
     else:
         return d ** 3  # ignoring B for backward compatibility
 
-def GSA(m, q, d, d1, beta, nu = 1):    
-    Rfactors = [q] * (m - d)
+def GSA(q, d, d1, beta, nu = 1):    
+    GSnorm = []
     d2 = d - d1
     log_vol = float(log2(q) * (d2 - 1) + log2(nu) * d1)
     delta = delta_0(beta)
     r_log = [(d - 1 - 2 * i) * float(log2(delta)) + log_vol / d for i in range(d)]
     for r_ in r_log:
         try:
-            Rfactors.append(2**r_)
+            GSnorm.append(2**r_)
         except OverflowError:
-            Rfactors.append(np.inf)
-    return Rfactors
+            GSnorm.append(np.inf)
+    return GSnorm
 
-def GSA_mod(m, q, d, d1, beta, nu = 1):    
-    Rfactors = [q] * (m - d)
+def GSA_mod(q, d, d1, beta, nu = 1):    
+    GSnorm = []
     d2 = d - d1
     log_vol = float(log2(q) * d2 + log2(nu) * d1)
     delta = delta_0(beta)
@@ -225,15 +222,15 @@ def GSA_mod(m, q, d, d1, beta, nu = 1):
     while first_R > log2(q):
         d -= 1
         log_vol -= log2(q)
-        Rfactors.append(q)
+        GSnorm.append(q)
         first_R = (d - 1) * float(log2(delta)) + log_vol / d
     r_log = [(d - 1 - 2*i) * float(log2(delta)) + log_vol / d for i in range(d)]
     for r_ in r_log:
         try:
-            Rfactors.append(2**r_)
+            GSnorm.append(2**r_)
         except OverflowError:
-            Rfactors.append(np.inf)
-    return Rfactors
+            GSnorm.append(np.inf)
+    return GSnorm
 
 def prob_np(GSnorm, stddev):
     pr_np = 1
@@ -278,13 +275,13 @@ def multinom(n, c):
 def easy_multinom(n, a, b):
     return multinom(n, [a, b, n - a - b])
 
-def num_ternary_secret(n, w, is_sec_bal):
+def num_ternary_secret(n, w, is_sec_bal=False):
     if is_sec_bal:
         return easy_multinom(n, w, w)
     else:
         return 2**w * comb(n, w)
 
-def prob_hw(n, zeta, w, w0, is_sec_bal):
+def prob_hw(n, zeta, w, w0, is_sec_bal=False):
     '''
     If balanced secret: 
         prob of n-dim, w pm 1 (2w nonzero) => zeta-dim, w0 pm 1 (2w0 nonzero)
@@ -296,7 +293,7 @@ def prob_hw(n, zeta, w, w0, is_sec_bal):
     else:
         return comb(n-w, zeta-w0) * comb(w, w0) / comb(n, zeta)
 
-def probs_hw_precompute(n, zeta, w, is_sec_bal, bound = 31):
+def probs_hw_precompute(n, zeta, w, is_sec_bal=False, bound = 31):
     numer = comb(n, zeta)
     if is_sec_bal:
         return [comb(n-2*w, zeta-2*i) * comb(w, i)**2 / numer for i in range(bound)]
@@ -304,7 +301,7 @@ def probs_hw_precompute(n, zeta, w, is_sec_bal, bound = 31):
         return [comb(n-w, zeta-i) * comb(w, i) / numer for i in range(bound)]
         
 
-def ambiguity(n, h, w, is_sec_bal):
+def ambiguity(n, h, w, is_sec_bal=False):
     '''
     The number of representations s = s_1 - s_2
     h: weight parameter of s

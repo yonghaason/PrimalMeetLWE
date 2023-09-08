@@ -101,7 +101,7 @@ def cost_beta(beta, d, n, q, m, stddev, w, t, param_specified, probs_hw = []):
     log_lat = log_BKZ_cost(d, beta)
     GSnorm = GSA(q, m, n + 1 - d, beta)
 
-    print("GSnorm:", GSnorm[0], GSnorm[-1])
+    # print("GSnorm:", GSnorm[0], GSnorm[-1])
 
     lat = {'cost': round(log_lat, 2)}
     lat['d'] = d
@@ -151,7 +151,7 @@ def cost_beta(beta, d, n, q, m, stddev, w, t, param_specified, probs_hw = []):
             continue
 
         ell0 = 6*stddev
-        b_lsh0 = 6*stddev
+        b_lsh0 = 12*stddev
 
         initial_stat = \
         {'cost': np.inf,
@@ -172,7 +172,7 @@ def cost_beta(beta, d, n, q, m, stddev, w, t, param_specified, probs_hw = []):
         'log_p_col': ['-']}
         cur_guess = meet_LWE_cost(0, GSnorm, d, 
             r = len(GSnorm), w = w_g, e = stddev, ell = ell0, b_lsh = b_lsh0,
-            C_proj = 10.0, C_lsh = 15.0, t=t, 
+            C_proj = 10.0, C_lsh = 10.0, t=t, 
             current_guess = copy.deepcopy(initial_stat), abort_bound=log_lat)
     
         if cur_guess['cost'] is np.inf or cur_guess['cost'] > log_lat:
@@ -201,17 +201,12 @@ def meet_LWE_cost(cur_lv, GSnorm, d,
     w_start = w//2
     w_range = None
 
-    if cur_lv == 0:
-        w_range = range(58, 59)
-    if cur_lv == 1:
-        w_range = range(31, 32)
-
-    # if cur_lv == t-1:
-    #     w_range = range(w_start, w)
-    # else:
-    #     if w_start % 2 == 1: 
-    #         w_start += 1
-    #     w_range = range(w_start, w, 2)
+    if cur_lv == t-1:
+        w_range = range(w_start, w)
+    else:
+        if w_start % 2 == 1: 
+            w_start += 1
+        w_range = range(w_start, w, 2)
 
     if verbose:
         if cur_lv == 0: 
@@ -291,7 +286,7 @@ def meet_LWE_cost(cur_lv, GSnorm, d,
                 ', (log_p_col=', log_p_col, ', R_lsh=2**', Log2(R_lsh), ', lsh_dim=', lsh_dim, ')', sep ="")
 
             comp = meet_LWE_cost(cur_lv+1, GSnorm, d,
-                            next_r, w_next, ell, ell, 1.5*ell, C_proj, C_lsh,
+                            next_r, w_next, ell, ell, 2*ell, C_proj, C_lsh,
                             t, copy.deepcopy(running_stat), abort_bound)
             if comp['cost'] < cur_best['cost']:
                 cur_best = copy.deepcopy(comp)

@@ -2,8 +2,8 @@ import numpy as np
 from math import log
 
 # from dependence_test import *
-# dep_test_lv1(l1=5, l2=15, r=20, error_param=1, error_unif=False)
-# dep_test_lv2(l1=5, l2=15, l3=45, r=20, error_param=1, error_unif=True)
+# dep_test_lv1(l1=6, l2=6, r=20, error_param=1)
+# dep_test_lv2(l1=6, l2=6, l3=6, r=20, error_param=1)
 
 def log2(a):
   return log(a, 2)
@@ -14,7 +14,7 @@ def p_adm_unif(b, ell):
   else:
     return ell/(2*b)
 
-def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=3, repeat=10000, scaler=1): 
+def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=10, repeat=10000, scaler=1): 
   assert l1 <= l2, "l should increase"
   E_p_rep = p_adm_unif(l1, 2*l2)**r
 
@@ -112,7 +112,7 @@ def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=3, repeat=10000, sc
   print("- Log E[p_sp]: %.4f / %.4f" % (log2(E_p_sp1) - log2(repeat), log2(E_p_sp2) - log2(repeat)))
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
 
-def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=1, repeat=10000, scaler=1):
+def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=10000, scaler=1):
   assert l1 <= l2, "l should increase"
   assert l2 <= l3, "l should increase"
 

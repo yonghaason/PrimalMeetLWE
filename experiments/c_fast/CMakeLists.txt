@@ -10,11 +10,15 @@ include_directories(src)
 add_executable(jensen_gap exec/jensen_gap.cpp)
 target_sources(jensen_gap PRIVATE ${SRCS})
 
-add_executable(ncf_model_test exec/ncf_model_test.cpp)
-target_sources(ncf_model_test PRIVATE ${SRCS})
+add_executable(ncf_uniform_test exec/ncf_uniform_test.cpp)
+target_sources(ncf_uniform_test PRIVATE ${SRCS})
 
-add_executable(pair_model_test exec/pair_model_test.cpp)
-target_sources(pair_model_test PRIVATE ${SRCS})
+add_executable(ncf_near_col_test exec/ncf_near_col_test.cpp)
+target_sources(ncf_near_col_test PRIVATE ${SRCS})
+
+add_executable(split_uniform_test exec/split_uniform_test.cpp)
+target_sources(split_uniform_test PRIVATE ${SRCS})
 
 add_executable(primal_meet_lwe exec/primal_meet_lwe.cpp)
 target_sources(primal_meet_lwe PRIVATE ${SRCS})
+

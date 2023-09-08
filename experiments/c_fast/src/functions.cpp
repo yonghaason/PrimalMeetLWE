@@ -6,6 +6,24 @@
 
 using namespace std;
 
+void gen_uniform_matrix(
+  const int m, const int d, const domain& q,
+  matrix& A)
+{
+  random_device rd;
+  mt19937 gen(rd());
+  vector<uniform_real_distribution<double>> coord_sampler(m);
+  
+  A.resize(m);
+  for (size_t i = 0 ; i < m; i++) {
+    A[i].resize(d);
+    coord_sampler[i] = uniform_real_distribution<double>(-q[i]/2, q[i]/2);
+    for (size_t j = 0; j < d; j++) {
+      A[i][j] = coord_sampler[i](gen);
+    }
+  }
+}
+
 void gen_noisy_instance(
   const int m, const int d, const int h, const double stddev, const domain& q,
   matrix& M, matrix& B, vector<int64_t>& s, vector<double>& e)

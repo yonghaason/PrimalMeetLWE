@@ -5,6 +5,10 @@
 
 using namespace std;
 
+void gen_uniform_matrix(
+  const int m, const int d, const domain& q,
+  matrix& A);
+
 void gen_noisy_instance(
   const int m, const int d, const int h, const double stddev, const domain& q,
   matrix& M, matrix& B, vector<int64_t>& s, vector<double>& e);

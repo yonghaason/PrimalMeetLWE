@@ -6,9 +6,9 @@
 #include <map>
 #include <random>
 
-// ./ncf_model_test -d 20 -h 8 -l 0.5 -q 4
-
 using namespace std;
+
+// ./ncf_near_col_test -m 15 -d 10 -h 4 -r 6 -b 4 -q 8 --repeat 1000
 
 void experiment(
   matrix& M, uint32_t m, uint32_t d, uint32_t h, matrix& B, uint32_t b, uint32_t l, uint32_t r,
@@ -52,7 +52,17 @@ int main(int argc, char* argv[]) {
     q[m-i-1] = q0 * pow(rhf, i);
   }
 
-  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << endl;
+  cout << "*********** Experiments for Heuristic 4 *********" << endl; 
+  cout << "* Settings " << endl;
+  cout << "- B = " << m << " X " << m << " matrix of Gram-Schmidt norm " 
+            << q[0] << " -> " << q[m-1] 
+            << " (GSA with rhf = " << rhf << ")" << endl;
+  cout << "- D = " << m << "-dimensional cube of i-th coord length " 
+       << "q[i] if i < " << m-r << " and " << 2*b << " if i >= " << m-r << endl;
+  cout << endl;  
+  cout << "* Goal: Compare # of " << l << "-near-collisions in L X L defined as L = { [Ms]_B: HW(s) = " << h << " & [Ms]_B ∈ D }" << endl; 
+  cout << " where M = our definition v.s. truly uniform" << endl;
+  cout << endl;
 
   double p_vol = 1;
   for (int i = m-1; i >= m-r; i--)
@@ -62,16 +72,6 @@ int main(int argc, char* argv[]) {
       p_vol *= (2*b / q[i]);
     }
   }  
-
-  // False Computation
-  // double p_nc = pow(l/b, r);
-  // for (int i = 0; i < m-r; i++)
-  // {
-  //   if (q[i] > l) 
-  //   {
-  //     p_nc *= 2*l/q[i];
-  //   }
-  // }
 
   double p_nc = 1.0;
   for (int i = 0; i < m; i++)
@@ -118,22 +118,14 @@ int main(int argc, char* argv[]) {
       A, m, d, h, B, b, l, r,
       pt_ratio_unif, pt_ratio_sq_unif, nc_count_unif, nc_count_sq_unif);
     
-    cout << "... Running " << iter << ". Current avg: " << nc_count_noisy / (iter+1) 
-          << " & " << nc_count_unif / (iter+1) << " (expectation = " << nc_expect << ")"
+    cout << "... Done " << iter << "-th exec. Current avg: " << nc_count_noisy / (iter+1) 
+          << " v.s. " << nc_count_unif / (iter+1) << " (theory = " << nc_expect << ")"
           // << endl;
-          << "\r" << std::flush;
+          << "\r" << std::flush;    
   }
-
   cout << endl;
 
-  cout << "************ Uniformity test ***********"  << endl;
-  auto pt_ratio_avg_noisy = pt_ratio_noisy / repeat;
-  auto pt_ratio_avg_unif = pt_ratio_unif / repeat;
-  
-  cout << "# Pts in [-" << b << ", " << b << "]^"<< r << ". noisy, unif, expec: " 
-        << pt_ratio_avg_noisy << ", " << pt_ratio_avg_unif << ", " <<  p_vol << endl;
-
-  cout << "************ Near-Collision test ***********"  << endl;
+  cout << "* Results"  << endl;
   auto nc_count_avg_noisy = nc_count_noisy / repeat;
   auto nc_count_avg_unif = nc_count_unif / repeat;
   auto nc_count_var_noisy = nc_count_sq_noisy / repeat - nc_count_avg_noisy*nc_count_avg_noisy;
@@ -142,7 +134,6 @@ int main(int argc, char* argv[]) {
         << nc_count_avg_noisy << ", " << nc_count_avg_unif << ", " << nc_expect << endl;
   cout << "             (std.dev) "
         << sqrt(nc_count_var_noisy) << ", " << sqrt(nc_count_var_unif) << endl;
-
 
   return 0;
 }

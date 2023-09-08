@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
   parser.add<uint32_t>("t", 't', "level t", false, 1);
   parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
-  parser.add<bool>("top-opti", '\0', "top-level optimization toggle", false, false);
+  parser.add<bool>("top-opti", '\0', "top-level optimization toggle", false, true);
 
   parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 1);
 
@@ -52,11 +52,10 @@ int main(int argc, char* argv[])
   b[0] = 0; // dummy; never used
   for (size_t i = 1; i <= t; i++) 
   {
-    ell[i] = 3*ell[i-1];
-    b[i] = 1.5*ell[i-1];
-    // b[i] = ell[i];
+    ell[i] = ell[i-1];
+    b[i] = 2*ell[i-1];
   }
-
+  
   vector<uint32_t> w(t+1);
   w[0] = h;
   for (size_t i = 1; i <= t; i++)
@@ -87,6 +86,8 @@ int main(int argc, char* argv[])
   {
     r[i] = 0;
     p_rep[i] = 1;
+    if (top_opti && i == t) continue;
+    
     double cur_prob = 1;
     vol_ratio[i] = 1;
     while (true)
@@ -107,7 +108,7 @@ int main(int argc, char* argv[])
       if (r[i] == r[i-1]) break;
     }
     if (r[i] == 0) 
-      throw invalid_argument("Cannot set projection dimension r[i]");
+      throw invalid_argument("Cannot set projection dimension r" + to_string(i));
   }
 
   vector<uint64_t> R_lsh(t+1);
@@ -167,11 +168,17 @@ int main(int argc, char* argv[])
   }
 
   std::cout << "---------- Parms ----------" << endl;
-  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << " (assume GSA)" << endl;
+  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << " (assume GSA with rhf =" << rhf << ")" << endl;
   std::cout << "   w, r, ell, b, R, Rp/2, R_lsh" << endl;
   std::cout << 0 << ": " << w[0] << ", " << r[0] << ", " << ell[0] << ", -, -, -, -" << endl;
-  for (size_t i = 1; i <= t; i++) {
+  for (size_t i = 1; i < t; i++) {
     std::cout << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << ", " << R[i] << ", " << R[i] * p_rep[i] / 2 << ", " << R_lsh[i] << endl;
+  }
+  if (top_opti) {
+    std::cout << t << ": " << w[t] << ", -, -, " << b[t] << ", " << R[t] << ", -, " << R_lsh[t] << endl;  
+  }
+  else {
+    std::cout << t << ": " << w[t] << ", " << r[t] << ", " << ell[t] << ", " << b[t] << ", " << R[t] << ", " << R[t] * p_rep[t] / 2 << ", " << R_lsh[t] << endl;  
   }
   std::cout << endl;
   
@@ -197,8 +204,8 @@ int main(int argc, char* argv[])
     std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
     << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
     << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
-    std::cout << "  - One LSH succeeds with " << p_goods[i] << " probability -> " << R_lsh[i] << " torus-LSH iterations" << endl;
-    std::cout << "  - (False) near-collision prob p_bad = " << p_bads[i] << endl;
+    // std::cout << "  - One LSH succeeds with " << p_goods[i] << " probability -> " << R_lsh[i] << " torus-LSH iterations" << endl;
+    // std::cout << "  - (False) near-collision prob p_bad = " << p_bads[i] << endl;
   }
   cout << endl;
 

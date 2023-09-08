@@ -6,7 +6,7 @@
 #include <map>
 #include <random>
 
-// ./pair_model_test -d 20 -h 8 -w 5 -l 0.5 -q 4
+// ./split_uniform_test -m 10 -d 20 -h 10 -w 6 -q 4
 
 using namespace std;
 
@@ -20,28 +20,37 @@ int main(int argc, char* argv[]) {
   parser.add<uint32_t>("d", 'd', "secret dimension", true, 20);
   parser.add<uint32_t>("h", 'h', "secret weight", true, 0);
   parser.add<uint32_t>("w", 'w', "split weight", true, 0);
-  parser.add<double>("l", 'l', "box length [-l, l]", true, 0);
   parser.add<double>("stddev", '\0', "error stddev", false, 1);
   parser.add<double>("q", 'q', "modulus param", false, 2048);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
-
+  parser.add<double>("step", '\0', "step of 1-norm box radius", false, 0.1);
+  
   parser.parse_check(argc, argv);
 
   auto m = parser.get<uint32_t>("m");
   auto d = parser.get<uint32_t>("d");
   auto h = parser.get<uint32_t>("h");  
-  auto w = parser.get<uint32_t>("w");  
-  auto l = parser.get<double>("l");
+  auto w = parser.get<uint32_t>("w");
   auto stddev = parser.get<double>("stddev");
   auto q0 = parser.get<double>("q");
   auto rhf = parser.get<double>("rhf");
+  auto step = parser.get<double>("step");
 
   vector<double> q(m);
   for (int i = 0; i < m; i++) {
     q[m-i-1] = q0 * pow(rhf, i);
   }
 
-  std::cout << "Coordinate length (q) = " << q[0] << " -> " << q[m-1] << endl;
+  cout << "*********** Experiments for Heuristic 2 *********" << endl; 
+  cout << "* Settings " << endl;
+  cout << "- B = " << m << " X " << m << " matrix of Gram-Schmidt norm " 
+            << q[0] << " -> " << q[m-1] 
+            << " (GSA with rhf = " << rhf << ")" << endl;
+  cout << "- s = ternary vector of HW(s) = " << h << endl;
+  cout << "- M = " << m << " X " << d << " matrix, s.t. [Ms]_B = short" << endl;
+  cout << "- L = { [Ms_1]_B: (s_1, s_2) is a " << w << "-rep pair of s }" << endl;
+  cout << "* Goal: Compare the number of points in a ball of radius r"  << endl;
+  cout << endl;
 
   matrix M; matrix B; secret s; vector<double> e;
   gen_noisy_instance(
@@ -63,31 +72,40 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  cout << "Ms1_set.size() = " << Ms1_set.size() << endl;
+  cout << "* Results" << endl;
+  cout << "r: |L ∩ Ball(r)|/|L| v.s. vol(Ball(r))/vol(P(B))" << endl;
 
-  size_t count = 0;
-  for (auto Ms1 : Ms1_set)
+  double radius = 0.0;
+  while (true) 
   {
-    double norm = inf_norm(Ms1);
-    if (norm <= l) 
+    radius += step;
+    if (radius >= q[0]/2) break;
+
+    double vol_ratio = 1;
+    for (size_t i = 0; i < m; i++)
     {
-      count++;
+      if (q[i] > 2*radius) 
+      {
+        vol_ratio *= (2*radius / q[i]);
+      }
+    }
+
+    if (vol_ratio >= 0.01)
+    {
+      size_t count = 0;
+      for (auto Ms1 : Ms1_set)
+      {
+        double norm = inf_norm(Ms1);
+        if (norm <= radius) 
+        {
+          count++;
+        }
+      }
+
+      double count_ratio = (double) count / (double) Ms1_set.size();
+      cout << radius << ": " << count_ratio << " v.s. " << vol_ratio << endl;
     }
   }
-
-  double vol_ratio = 1;
-  for (size_t i = 0; i < m; i++)
-  {
-    if (q[i] > 2*l) 
-    {
-      vol_ratio *= (2*l / q[i]);
-    }
-  }
-
-  double count_ratio = (double) count / (double) Ms1_set.size();
-
-  cout << "Volume Ratio: " << vol_ratio << endl;
-  cout << "Ms in Box Ratio: " << count_ratio << endl;
 
   return 0;
 }

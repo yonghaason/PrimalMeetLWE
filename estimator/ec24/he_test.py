@@ -3,9 +3,9 @@ param_specified = {}
 filename = False
 
 logn=15; logq=699; h=128
-# logn=15; logq=768; h=192
-# logn=16; logq=1450; h=64
-# logn=16; logq=1553; h=192
+logn=15; logq=768; h=192
+logn=16; logq=1450; h=64
+logn=16; logq=1553; h=192
 
 param = [2**logn, 2**logq, 'gaussian', 3.2, h, 2**logn]
 

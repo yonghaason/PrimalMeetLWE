@@ -194,7 +194,7 @@ def cost_beta(beta, d, n, q, m, stddev, w, t, param_specified, probs_hw = []):
     
 def meet_LWE_cost(cur_lv, GSnorm, d,
     r, w, e, ell, b_lsh, C_proj, C_lsh, t,
-    current_guess, abort_bound = np.inf, verbose=True):
+    current_guess, abort_bound = np.inf, verbose=False):
     
     cur_best = copy.deepcopy(current_guess)
 

@@ -23,9 +23,8 @@ int main(int argc, char* argv[]) {
   parser.add<double>("stddev", '\0', "error stddev", false, 1);
   parser.add<double>("q", 'q', "modulus param", false, 2048);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
-  // parser.add<double>("step", '\0', "step of 1-norm box radius", false, 0.1);
 
-  parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 100);
+  parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 1000);
   
   parser.parse_check(argc, argv);
 
@@ -36,7 +35,6 @@ int main(int argc, char* argv[]) {
   auto stddev = parser.get<double>("stddev");
   auto q0 = parser.get<double>("q");
   auto rhf = parser.get<double>("rhf");
-  // auto step = parser.get<double>("step");
   auto repeat = parser.get<uint64_t>("repeat");
 
   vector<double> q(m);
@@ -51,9 +49,12 @@ int main(int argc, char* argv[]) {
             << " (GSA with rhf = " << rhf << ")" << endl;
   std::cout << "- s = ternary vector of HW(s) = " << h << endl;
   std::cout << "- M = " << m << " X " << d << " matrix, s.t. [Ms]_B = short" << endl;
-  std::cout << "- L = { [Ms_1]_B: (s_1, s_2) is a " << w << "-rep pair of s }" << endl;
+  std::cout << "- L ⊂ { [Ms_1]_B: (s_1, s_2) is a " << w << "-rep pair of s }" << endl;
   std::cout << "* Goal: Compare the number of points in a ball of radius r with random center"  << endl;
   std::cout << endl;
+
+  random_device rd;
+  mt19937 gen(rd());
 
   matrix M; matrix B; secret s; vector<double> e;
   gen_noisy_instance(
@@ -61,22 +62,49 @@ int main(int argc, char* argv[]) {
     M, B, s, e);
   auto Mtrans = transpose(M);
 
-  auto candidates = enumerate_secrets(d, w);
-  set<vector<double>> Ms1_set;
-  
-  for (auto s1 : candidates)
+  vector<uint32_t> secret_nonzeros;
+  vector<int> secret_parity;
+  vector<uint32_t> secret_zeros;
+  for (size_t i = 0; i < d; i++) 
   {
-    auto s2 = sub(s, s1);
-    if (hamming_weight(s2) == w)
-    {
-      auto Ms1 = matmul(Mtrans, s1);
-      Ms1 = babaiNP(Ms1, B);
-      Ms1_set.insert(Ms1);
-    }
+    if (s[i] != 0) secret_nonzeros.push_back(i);
+    else secret_zeros.push_back(i);
   }
 
-  random_device rd;
-  mt19937 gen(rd());
+  set<vector<double>> Ms1_set;
+  uniform_int_distribution<uint64_t> binarysampler(0, 1);
+
+  while (Ms1_set.size() < 10000)
+  {
+    vector<size_t> nonzero_indices(secret_nonzeros.size());
+    iota(nonzero_indices.begin(), nonzero_indices.end(), 0);
+    random_shuffle(nonzero_indices.begin(), nonzero_indices.end());
+
+    vector<size_t> zero_indices(secret_zeros.size());
+    iota(zero_indices.begin(), zero_indices.end(), 0);
+    random_shuffle(zero_indices.begin(), zero_indices.end());
+
+    secret s1(d);
+    for (size_t i = 0; i < h/2; i++) 
+    {
+      auto idx = secret_nonzeros[nonzero_indices[i]];
+      s1[idx] = s[idx];
+    }
+    for (size_t i = 0; i < w-h/2; i++) 
+    {
+      auto idx = secret_zeros[zero_indices[i]];
+      s1[idx] = 2*binarysampler(gen) - 1;
+    }
+    
+    auto s2 = sub(s, s1);
+    assert(hamming_weight(s2) == w);
+    
+    auto Ms1 = matmul(Mtrans, s1);
+    Ms1 = babaiNP(Ms1, B);
+    Ms1_set.insert(Ms1);
+  }
+  // std::cout << ".... List done" << endl;
+
   vector<uniform_real_distribution<double>> coord_sampler(m);
   for (size_t i = 0; i < m; i++) 
   {
@@ -131,43 +159,9 @@ int main(int argc, char* argv[]) {
   for (size_t i = 0; i < 101; i++) 
   {
     if (result_count[i] != 0)
-      std::cout << (double) i / 100 << " v.s. " << result[i] / result_count[i] << endl;
+      std::cout << (double) i / 100 << "~" << (double) (i+1) / 100 << 
+      ", " << result[i] / result_count[i] << endl;
   }
-
-  // std::cout << "* Results" << endl;
-  // std::cout << "r: |L ∩ Ball(r)|/|L| v.s. vol(P(B) ∩ Ball(r))/vol(P(B))" << endl;
-
-  // double radius = 0.0;
-  // while (true) 
-  // {
-  //   radius += step;
-  //   if (radius >= q[0]/2) break;
-
-  //   double vol_ratio = 1;
-  //   for (size_t i = 0; i < m; i++)
-  //   {
-  //     if (q[i] > 2*radius) 
-  //     {
-  //       vol_ratio *= (2*radius / q[i]);
-  //     }
-  //   }
-
-  //   if (vol_ratio >= 0.01)
-  //   {
-  //     size_t count = 0;
-  //     for (auto Ms1 : Ms1_set)
-  //     {
-  //       double norm = inf_norm(Ms1);
-  //       if (norm <= radius) 
-  //       {
-  //         count++;
-  //       }
-  //     }
-
-  //     double count_ratio = (double) count / (double) Ms1_set.size();
-  //     std::cout << radius << ": " << count_ratio << " v.s. " << vol_ratio << endl;
-  //   }
-  // }
 
   return 0;
 }

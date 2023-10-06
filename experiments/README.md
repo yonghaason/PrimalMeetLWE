@@ -53,7 +53,7 @@ This is a (proof-of-concept) implementation of Meet-LWE for matrix modulus (Algo
 The experiment in the paper can be reproduced as follows:
 First, run the following command
 ```bash
-./meet_lwe_matrix -m 25 -d 20 -h 12 -q 30 -t 2 -C 2
+./meet_lwe_matrix -m 25 -d 20 -h 12 -q 30 -t 2 -C 2 --repeat 100
 ```
 and then insert the split weights
 ```bash

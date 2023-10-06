@@ -2,8 +2,8 @@ import numpy as np
 from math import log
 
 # from dependence_test import *
-# dep_test_lv1(l1=6, l2=6, r=20, error_param=1)
-# dep_test_lv2(l1=6, l2=6, l3=6, r=20, error_param=1)
+# dep_test_lv1(l1=6, l2=6, r=20 error_param=1, error_unif=False)
+# dep_test_lv2(l1=6, l2=6, l3=6, r=20, error_param=1, error_unif=False)
 
 def log2(a):
   return log(a, 2)
@@ -19,7 +19,7 @@ def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=10, repeat=10000, s
   E_p_rep = p_adm_unif(l1, 2*l2)**r
 
   print("******* Goal of this experiment **********")
-  print("Define p(e) := Product of [1.0 - |e_i| / (2*l3)]")
+  print("Define p(e) := Product of [1.0 - |e_i| / (2*l2)]")
   print("       & p_sp(e, R) := 1 - (1 - p(e))^R")
   print("Compare E[p_L] = E[p_sp(e_1)*p_sp(e_2)]")
   print()
@@ -44,16 +44,15 @@ def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=10, repeat=10000, s
   E_p_sp1 = 0.0; E_p_sp2 = 0.0
   E_p_L = 0.0
 
-  errors = np.zeros(r)
-
-  if error_unif:
-    for i in range(r):
-      errors[i] = np.random.uniform(-error_param, error_param)
-  else:
-    for i in range(r):
-      errors[i] = np.random.normal(scale=error_param)
-
   for _ in range(repeat):
+    errors = np.zeros(r)
+    if error_unif:
+      for i in range(r):
+        errors[i] = np.random.uniform(-error_param, error_param)
+    else:
+      for i in range(r):
+        errors[i] = np.random.normal(scale=error_param)
+
     v1 = np.zeros(r)
     v2 = np.zeros(r)
     for i in range(r):
@@ -76,12 +75,13 @@ def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=10, repeat=10000, s
     E_p_sp2 += p_sp2
     E_p_L += p_sp1*p_sp2
 
-  # print("- e in [%.3f, %.3f]" % (error.min(), error.max())) 
   print("- E[p_sp]: %.4f / %.4f" % (E_p_sp1/repeat, E_p_sp2/repeat))
   print("- E[p_L]=E[p_sp1*p_sp2]: %.4f" % (E_p_L/repeat))
   print("- Log E[p_sp]: %.4f / %.4f" % (log2(E_p_sp1) - log2(repeat), log2(E_p_sp2) - log2(repeat)))
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
   print()
+
+  Exp_1 = E_p_L/repeat
 
   print("Experiment 2: e1, e2 independently sampled from U([-%d, %d]^%d)" % (l1, l1, r))
   E_p_sp1 = 0.0; E_p_sp2 = 0.0
@@ -111,6 +111,10 @@ def dep_test_lv1(l1, l2, r, error_param, error_unif=False, C=10, repeat=10000, s
   print("- E[p_L]=E[p_sp1*p_sp2]: %.4f" % (E_p_L/repeat))
   print("- Log E[p_sp]: %.4f / %.4f" % (log2(E_p_sp1) - log2(repeat), log2(E_p_sp2) - log2(repeat)))
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
+
+  Exp_2 = E_p_L/repeat
+
+  return Exp_1, Exp_2
 
 def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=10000, scaler=1):
   assert l1 <= l2, "l should increase"
@@ -147,16 +151,15 @@ def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=1000
   E_p_sp1 = 0.0; E_p_sp2 = 0.0; E_p_sp3 = 0.0; E_p_sp4 = 0.0
   E_p_L = 0.0
 
-  e_0 = np.zeros(r)
-
-  if error_unif:
-    for i in range(r):
-      e_0[i] = np.random.uniform(-error_param, error_param)
-  else:
-    for i in range(r):
-      e_0[i] = np.random.normal(scale=error_param)
-
   for _ in range(repeat):
+    e_0 = np.zeros(r)
+    if error_unif:
+      for i in range(r):
+        e_0[i] = np.random.uniform(-error_param, error_param)
+    else:
+      for i in range(r):
+        e_0[i] = np.random.normal(scale=error_param)
+
     e_11 = np.zeros(r); e_12 = np.zeros(r)
     for i in range(r):
       while 1:
@@ -190,12 +193,13 @@ def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=1000
     E_p_sp1 += p_sp1; E_p_sp2 += p_sp2; E_p_sp3 += p_sp3; E_p_sp4 += p_sp4     
     E_p_L += p_sp1*p_sp2*p_sp3*p_sp4
 
-  # print("- e_0 in [%.3f, %.3f]" % (e_0.min(), e_0.max())) 
   print("- E[p_sp]: %.4f / %.4f / %.4f / %.4f" % (E_p_sp1/repeat, E_p_sp2/repeat, E_p_sp3/repeat, E_p_sp4/repeat))
   print("- E[p_L]: %.4f" % (E_p_L/repeat))
   print("- Log E[p_sp]: %.4f / %.4f / %.4f / %.4f" % (log2(E_p_sp1) - log2(repeat), log2(E_p_sp2) - log2(repeat), log2(E_p_sp3) - log2(repeat), log2(E_p_sp4) - log2(repeat)))
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
   print()
+
+  Exp_1 = E_p_L/repeat
   
   print("* Experiment 2: Same with 1, except e_11 & e_12 are independent")
   print("                i.e., e_11, e_12: independently sampled from U([-%d, %d]^%d)" % (l1, l1, r))  
@@ -239,6 +243,8 @@ def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=1000
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
   print()
 
+  Exp_2 = E_p_L/repeat
+
   print("* Experiment 3: All e_21 ... e_24 independently sampled from U([-%d, %d]^%d)" % (l2, l2, r))  
   E_p_sp1 = 0.0; E_p_sp2 = 0.0; E_p_sp3 = 0.0; E_p_sp4 = 0.0
   E_p_L = 0.0
@@ -269,3 +275,7 @@ def dep_test_lv2(l1, l2, l3, r, error_param, error_unif=False, C=10, repeat=1000
   print("- Log E[p_sp]: %.4f / %.4f / %.4f / %.4f" % (log2(E_p_sp1) - log2(repeat), log2(E_p_sp2) - log2(repeat), log2(E_p_sp3) - log2(repeat), log2(E_p_sp4) - log2(repeat)))
   print("- Log E[p_L]: %.4f" % (log2(E_p_L) - log2(repeat)))
   print()
+  
+  Exp_3 = E_p_L/repeat
+
+  return Exp_1, Exp_2, Exp_3

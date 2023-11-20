@@ -18,3 +18,6 @@ target_sources(split_uniform_test PRIVATE ${SRCS})
 
 add_executable(meet_lwe_matrix exec/meet_lwe_matrix.cpp)
 target_sources(meet_lwe_matrix PRIVATE ${SRCS})
+
+add_executable(cvp_test exec/cvp_test.cpp)
+target_sources(cvp_test PRIVATE ${SRCS})

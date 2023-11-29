@@ -40,7 +40,7 @@ void gen_noisy_instance(
     B[j][j] = q[j];
     coord_sampler[j] = uniform_real_distribution<double>(-q[j]/2, q[j]/2);
     for (size_t i = 0; i < j; i++) {
-      B[i][j] = coord_sampler[j](gen);
+      B[i][j] = coord_sampler[i](gen);
     }
   }
   

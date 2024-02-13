@@ -15,7 +15,7 @@ This will make executables `expectation_exchange`, `ncf_uniform_test`, `split_un
 This experiment checks the computation of $p_{np}$ and $p_{adm}$ based on the herustic approximation 
 $$\zeta_{Q}(\mathcal{D}_{\Z, \sqrt{2\pi}\sigma}) \approx \mathcal{G}_\sigma$$.
 
-To run this experiment, run *discrete_gaussian.sage* using [sagemath](https://www.sagemath.org/)
+To run this experiment, run *gaussian_approx.sage* using [sagemath](https://www.sagemath.org/)
   
 ## Section D.1 Uniformity Modeling
   

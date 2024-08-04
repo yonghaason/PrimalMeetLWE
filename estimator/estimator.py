@@ -308,9 +308,13 @@ def meet_LWE_cost(cur_lv, GSnorm, d,
                 for i in range(cur_r - next_r):
                     p_ncf *= prob_admissible_uniform(GSnorm[-cur_r+i], e)     
         else:
-            p_sp = 0.95                    
-            for i in range(cur_r):
-                p_ncf *= prob_admissible_gaussian(GSnorm[i], e)
+            p_sp = 0.95
+            if cur_lv == 0:
+                for i in range(cur_r):
+                    p_ncf *= prob_admissible_gaussian(GSnorm[i], e)
+            else:
+                for i in range(cur_r):
+                    p_ncf *= prob_admissible_uniform(GSnorm[i], e)
 
 
         running_stat['log_R'].append(Log2(R))

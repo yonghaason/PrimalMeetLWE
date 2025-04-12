@@ -17,10 +17,12 @@ int main(int argc, char* argv[])
   parser.add<double>("stddev", '\0', "error stddev", false, 1);
   parser.add<double>("q", 'q', "modulus param", false, 2048);
 
-  parser.add<uint32_t>("t", 't', "level t", false, 1);
+  parser.add<uint32_t>("t", 't', "level t", false, 2);
   parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
-  parser.add<bool>("top-opti", '\0', "top-level optimization toggle", false, true);
+  
+  parser.add<uint32_t>("w1", '\0', "lv 1 weight", false, -1);
+  parser.add<uint32_t>("w2", '\0', "lv 2 weight", false, -1);
 
   parser.add<uint64_t>("repeat", '\0', "# of experiments", false, 1);
 
@@ -37,8 +39,7 @@ int main(int argc, char* argv[])
   auto t = parser.get<uint32_t>("t");
   auto C = parser.get<uint32_t>("C");
   auto rhf = parser.get<double>("rhf");
-  auto top_opti = parser.get<bool>("top-opti");
-
+  
   auto repeat = parser.get<uint64_t>("repeat");
 
   vector<double> q(m);
@@ -58,10 +59,19 @@ int main(int argc, char* argv[])
   
   vector<uint32_t> w(t+1);
   w[0] = h;
-  for (size_t i = 1; i <= t; i++)
-  {
-    std::cout << "Insert w[" << i << "]: "; 
-    cin >> w[i];
+  if (parser.get<uint32_t>("w1") != -1 && parser.get<uint32_t>("w2") != -1) {
+    w[1] = parser.get<uint32_t>("w1");
+    w[2] = parser.get<uint32_t>("w2");
+  }
+  else {
+    for (size_t i = 1; i <= t; i++)
+    {
+      std::cout << "Insert w[" << i << "]: "; 
+      cin >> w[i];
+    }
+  }
+  
+  for (size_t i = 1; i <= t; i++) {
     auto eps = w[i] - w[i-1]/2;
     if (eps < 0)
       throw invalid_argument("w[i] < w[i-1]/2, fail");
@@ -86,7 +96,7 @@ int main(int argc, char* argv[])
   {
     r[i] = 0;
     p_rep[i] = 1;
-    if (top_opti && i == t) continue;
+    if (i == t) continue;
     
     double cur_prob = 1;
     vol_ratio[i] = 1;
@@ -163,30 +173,28 @@ int main(int argc, char* argv[])
   
   size_t top_level_full_size = binom(d, w[t]) * (1ull << w[t]);
   size_t top_level_size = top_level_full_size;
-  if (!top_opti)
-  {
-    top_level_size = top_level_full_size;
-  }
-  else
-  {
-    top_level_size = sqrt(3) * (double) top_level_full_size / sqrt(R[t]);
-    expected_list_size[t] = top_level_size;      
-  }
-
+  
+  top_level_size = sqrt(3) * (double) top_level_full_size / sqrt(R[t]);
+  expected_list_size[t] = top_level_size;      
+  
   
   std::cout << "---------- Parms ----------" << endl;
   std::cout << "Gram-Schmidt norm = " << q[0] << " -> " << q[m-1] << " (assume GSA with rhf =" << rhf << ")" << endl;
-  std::cout << "      w, r, ell, b_lsh, R_ncf, p_nc, R" << endl;
-  std::cout << "lv 0: " << w[0] << ", " << r[0] << ", " << ell[0] << ", -, " << R_ncf[1] << ", " << p_nc[1] << ", " << R[1] << endl;
+  std::cout << "      " 
+    << setw(6) << "w," << setw(6) << "r," << setw(6) << "ell," << setw(7) << "b_lsh," << setw(8) << "R_ncf,"  
+    << setw(11) << "C/p_lsh," << setw(11) << "p_nc," << setw(11) << "C/p_rep," << setw(10) << "R," << setw(9) << "size" << endl;
+  std::cout << "lv 0: " 
+    << setw(5) << w[0] << "," << setw(5) << r[0] << "," << setw(5) << ell[0] << "," << setw(7) << "-," << setw(7) << R_ncf[1] << ","
+    << setw(11) << "," << setw(10) << p_nc[1] << "," << setw(11) << "-," << setw(9) << R[1] << ", " << setw(8) << "-" << endl;
   for (size_t i = 1; i < t; i++) {
-    std::cout << "lv " << i << ": " << w[i] << ", " << r[i] << ", " << ell[i] << ", " << b[i] << ", " << R_ncf[i+1] <<  ", " << p_nc[i+1] << ", " << R[i+1] << endl;
+    std::cout << "lv " << i << ": " 
+    << setw(5) << w[i] << "," << setw(5) <<  r[i] << "," << setw(5) << ell[i] << "," << setw(6) <<  b[i] << "," << setw(7) << R_ncf[i+1] << "," 
+    << setw(10) << C/p_lsh[i] << "," << setw(10) << p_nc[i+1] << "," << setw(10) << C / p_rep[i] << "," << setw(9) << R[i+1] << "," << setw(9) << expected_list_size[i] << endl;
   }
-  if (top_opti) {
-    std::cout << "lv " << t << ": " << w[t] << ", -, -, " << b[t] << ", -, -, -" << endl;  
-  }
-  else {
-    std::cout << "lv " << t << ": " << w[t] << ", " << r[t] << ", " << ell[t] << ", " << b[t] << ", -, -, -" << endl; 
-  }
+  
+  std::cout << "lv " << t << ": " 
+  << setw(5) << w[t] << "," << setw(6) << "-," << setw(6) <<  "-," << setw(6) << b[t] << ",      -,"
+  << setw(10) << C/p_lsh[t] << "," << setw(11) << "-," << setw(11) << "-," << "        -," << setw(9) << expected_list_size[t] << endl;  
   std::cout << endl;
   
   /**
@@ -206,9 +214,11 @@ int main(int argc, char* argv[])
   vector<double> p_r_unif{0.815, 0.774, 0.742, 0.706, 0.675, 0.643, 0.617, 0.592, 0.57, 0.549};
 
   double p_suc_theory = p_r_gauss[r[1]/5] * p_r_gauss[r[0]/5] * p_nc[1];
+  cout << "p_suc_theory: " << p_r_gauss[r[1]/5] << " * " << p_r_gauss[r[0]/5] << " * " << p_nc[1] << endl;
   for (int i = 1; i < t; i++)
   {
-    p_suc_theory *= pow(p_r_unif[r[i+1]/5] * p_r_unif[r[i+1]/5] * p_nc[i+1], (1 << i));
+    cout << " * (" << pow(1 - exp(-3), 2) << " * " << p_r_unif[r[i+1]/5] << " * " << p_nc[i+1] << ")^" << (1 << i) << endl;
+    p_suc_theory *= pow((1 - exp(-3)) * p_r_unif[r[i+1]/5] * p_nc[i+1], (1 << i));
   }
 
   cout << "* Success probability lower bound (by theoretic analysis): " << p_suc_theory << endl;
@@ -225,26 +235,89 @@ int main(int argc, char* argv[])
   for (int i = t; i >= 1; i--)
   {
     std::cout << "Level " << i << endl;
-    if ((i == t) && top_opti)
+    if (i == t)
     {
       std::cout << "- Step 1. Construct L" << i << " ⊂ {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << "} of size " << top_level_size << " (full size = " << top_level_full_size << ")" << endl;;
     }
     else 
     {
-      std::cout << "- Step 1. Construct L" << i << " = {s, [Ms]_{B, " << r[i-1] << "}: HW(s) = " << w[i] << " and [Ms]_{B, " << r[i] << "} in [" << -ell[i] << ", " << ell[i] << "]^" << r[i] << "}" << endl;
+      std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
+      << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
+      << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;  
     }
-    std::cout << "- Step 2. Recover S" << i-1 << " = {s: HW(s) = " << w[i-1] 
-    << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
-    << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;
     // std::cout << "  - One LSH succeeds with " << p_lsh[i] << " probability -> " << R_ncf[i] << " torus-LSH iterations" << endl;
     // std::cout << "  - (False) near-collision prob p_bad = " << p_col[i] << endl;
   }
   cout << endl;
 
+  string prefix = to_string(d) + "_" + to_string(h) + "_" + to_string(w[1]) + "_" + to_string(w[2]);
   
+  auto start = chrono::steady_clock::now();
+
   /////////////////////////////////////////////////////////////////////////////////////////
 
-  auto start = chrono::steady_clock::now();
+  // for (size_t iter = 0; iter < repeat; iter++) 
+  // {
+  //   std::cout << "... Runnning " << iter + 1 << "-th, until now " 
+  //     << success_count << " successes" << '\r' << std::flush;
+    
+  //   matrix M; matrix B; secret s; vector<double> e;
+  //   gen_noisy_instance(
+  //     m, d, h, stddev, q, 
+  //     M, B, s, e);
+  //   auto Mtrans = transpose(M);
+    
+  //   generate_random_vectors(d, w[t], top_level_size, prefix + "_" + to_string(t) + "_secrets.txt");
+  
+  //   for (int i = t; i >= 1; i--) 
+  //   {
+  //     list L;      
+  //     ifstream inFile(prefix + "_" + to_string(i) + "_secrets.txt");
+  //     ofstream outFile(prefix + "_" + to_string(i) + "_list.txt");      
+  //     string line;      
+  //     uint64_t sssssize = 0;
+  //     while (getline(inFile, line)) {
+  //       if (line.empty()) continue;  // 빈 줄은 건너뜁니다.        
+  //       istringstream iss(line);
+  //       secret s_cand;
+  //       int64_t num;        
+  //       while (iss >> num) {
+  //         s_cand.push_back(num);
+  //       }        
+  //       auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[i-1]);        
+  //       for (auto val : s_cand) {outFile << val << " ";}
+  //       outFile << ": ";
+  //       for (auto val : Ms) {outFile << val << " ";}
+  //       outFile << "\n";
+  //       sssssize++;
+  //     }
+  //     inFile.close();
+  //     outFile.close();
+
+  //     list_sizes[i] += sssssize;
+      
+  //     domain dom(r[i-1]);
+  //     for (int k = 0; k < r[i-1] - r[i]; k++) 
+  //       {dom[k] = q[m - r[i-1] + k];}
+  //     for (int k = r[i-1] - r[i]; k < r[i-1]; k++) 
+  //       {dom[k] = ell[i];}
+          
+  //     size_t collision_nums = 0;
+  //     NCF_lsh_serialize(prefix, i, dom, ell[i-1], w[i-1], b[i], R_ncf[i], collision_nums);
+  //     collision_numbers[i] += collision_nums;
+  //   }
+
+  //   ifstream inFile(prefix + "_0_secrets.txt");
+  //   if (inFile.peek() != ifstream::traits_type::eof()) {
+  //     success_count++;
+  //   } else {
+  //     unwanted_count++;
+  //   }
+
+  //   inFile.close();
+  // }
+
+  ///////////////////////////////////////////////////////////////////////////////////////// Original (RAM)
 
   for (size_t iter = 0; iter < repeat; iter++) 
   {
@@ -257,53 +330,31 @@ int main(int argc, char* argv[])
       M, B, s, e);
     auto Mtrans = transpose(M);
 
-    // Sanity check
-    // auto MsB = matmul(Mtrans, s);
-    // MsB = babaiNP(MsB, B);
-    // print(MsB); print(e);
-
     set<secret> candidate_S;
-    
-    if (top_opti)
-    {
+
+    set<secret> basic_secret = enumerate_secrets(w[t], w[t]);
+      vector<secret> basic_secret_vec(basic_secret.begin(), basic_secret.end());
+      random_device rd;
+      mt19937 gen(rd());
+      uniform_int_distribution<int64_t> randindex(0, basic_secret_vec.size() - 1);
+
       while (candidate_S.size() < top_level_size) 
       {
-        set<secret> basic_secret = enumerate_secrets(w[t], w[t]);
-        vector<secret> basic_secret_vec(basic_secret.begin(), basic_secret.end());
-        random_device rd;
-        mt19937 gen(rd());
-        uniform_int_distribution<int64_t> randindex(0, basic_secret_vec.size() - 1);
         auto index = randindex(gen);
         secret tmp(basic_secret_vec[index]);
         tmp.resize(d);
         random_shuffle(tmp.begin(), tmp.end());
         candidate_S.insert(tmp);
       }
-    }
-    else 
-    {
-      candidate_S = enumerate_secrets(d, w[t]);
-    }
-    
+  
     for (int i = t; i >= 1; i--) 
     {
       list L;
-      if ((i == t) && !top_opti)
+
+      for (auto s_cand: candidate_S)
       {
-        for (auto s_cand: candidate_S)
-        {
-          auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[t-1]);
-          if (inf_norm(Ms, r[t-1] - r[t]) < ell[t]) 
-            L.push_back(make_pair(s_cand, Ms));
-        }
-      }
-      else 
-      {
-        for (auto s_cand: candidate_S)
-        {
-          auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[i-1]);
-          L.push_back(make_pair(s_cand, Ms));
-        }
+      auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[i-1]);
+      L.push_back(make_pair(s_cand, Ms));
       }
 
       list_sizes[i] += L.size();
@@ -327,6 +378,7 @@ int main(int argc, char* argv[])
         unwanted_count++;
     }
   }
+  ///////////////////////////////////////////////////////////////////////////////////////// 
 
   auto end = chrono::steady_clock::now();
 

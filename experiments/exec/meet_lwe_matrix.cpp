@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
   parser.add<double>("q", 'q', "modulus param", false, 2048);
 
   parser.add<uint32_t>("t", 't', "level t", false, 2);
-  parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 3);
+  parser.add<uint32_t>("C", 'C', "lsh iteration multiple", false, 2);
   parser.add<double>("rhf", '\0', "root-hermite-factor", false, 1.05);
   
   parser.add<uint32_t>("w1", '\0', "lv 1 weight", false, -1);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 
   vector<double> q(m);
   for (int i = 0; i < m; i++) {
-    q[m-i-1] = q0 * pow(rhf, i);
+    q[m-i-1] = q0 * pow(rhf, 2*i);
   }
 
   vector<double> ell(t+1);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
       throw invalid_argument("Cannot set projection dimension r" + to_string(i));
   }
 
-  vector<uint64_t> R_ncf(t+1);
+  vector<uint64_t> R_lsh(t+1);
   vector<double> p_nc(t+1);
   vector<double> p_lsh(t+1);
   vector<double> p_col(t+1);
@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
       p_col[i] *= 1.0 / n_tmp[k];
     }
 
-    R_ncf[i] = ceil(C/p_lsh[i]);
+    R_lsh[i] = ceil(C/p_lsh[i]);
   }
 
   vector<double> expected_list_size(t+1);
@@ -181,14 +181,14 @@ int main(int argc, char* argv[])
   std::cout << "---------- Parms ----------" << endl;
   std::cout << "Gram-Schmidt norm = " << q[0] << " -> " << q[m-1] << " (assume GSA with rhf =" << rhf << ")" << endl;
   std::cout << "      " 
-    << setw(6) << "w," << setw(6) << "r," << setw(6) << "ell," << setw(7) << "b_lsh," << setw(8) << "R_ncf,"  
+    << setw(6) << "w," << setw(6) << "r," << setw(6) << "ell," << setw(7) << "b_lsh," << setw(8) << "R_lsh,"  
     << setw(11) << "C/p_lsh," << setw(11) << "p_nc," << setw(11) << "C/p_rep," << setw(10) << "R," << setw(9) << "size" << endl;
   std::cout << "lv 0: " 
-    << setw(5) << w[0] << "," << setw(5) << r[0] << "," << setw(5) << ell[0] << "," << setw(7) << "-," << setw(7) << R_ncf[1] << ","
+    << setw(5) << w[0] << "," << setw(5) << r[0] << "," << setw(5) << ell[0] << "," << setw(7) << "-," << setw(7) << R_lsh[1] << ","
     << setw(11) << "," << setw(10) << p_nc[1] << "," << setw(11) << "-," << setw(9) << R[1] << ", " << setw(8) << "-" << endl;
   for (size_t i = 1; i < t; i++) {
     std::cout << "lv " << i << ": " 
-    << setw(5) << w[i] << "," << setw(5) <<  r[i] << "," << setw(5) << ell[i] << "," << setw(6) <<  b[i] << "," << setw(7) << R_ncf[i+1] << "," 
+    << setw(5) << w[i] << "," << setw(5) <<  r[i] << "," << setw(5) << ell[i] << "," << setw(6) <<  b[i] << "," << setw(7) << R_lsh[i+1] << "," 
     << setw(10) << C/p_lsh[i] << "," << setw(10) << p_nc[i+1] << "," << setw(10) << C / p_rep[i] << "," << setw(9) << R[i+1] << "," << setw(9) << expected_list_size[i] << endl;
   }
   
@@ -210,14 +210,17 @@ int main(int argc, char* argv[])
    * 
    * p_suc = Prod_{i = 0 to t-1} (p_sp[i] * p_ncf[i] * p_nc[i])^{2^i} 
   */
-  vector<double> p_r_gauss{0.864, 0.857, 0.854, 0.849, 0.845, 0.842, 0.836, 0.833, 0.830, 0.826};
-  vector<double> p_r_unif{0.815, 0.774, 0.742, 0.706, 0.675, 0.643, 0.617, 0.592, 0.57, 0.549};
+  vector<double> p_r_gauss{0.864, 0.857, 0.854, 0.849, 0.845, 0.842, 0.836, 0.833, 0.830, 0.826, 
+  0.822, 0.819, 0.814, 0.812, 0.809, 0.806, 0.802, 0.799, 0.796, 0.792, 0.790};
+  vector<double> p_r_unif{0.815, 0.774, 0.742, 0.706, 0.675, 0.643, 0.617, 0.592, 0.57, 0.549,
+  0.529, 0.509, 0.490, 0.472, 0.455, 0.437, 0.424, 0.409, 0.396, 0.382, 0.369};
 
   double p_suc_theory = p_r_gauss[r[1]/5] * p_r_gauss[r[0]/5] * p_nc[1];
-  cout << "p_suc_theory: " << p_r_gauss[r[1]/5] << " * " << p_r_gauss[r[0]/5] << " * " << p_nc[1] << endl;
+
+  // cout << "p_suc_theory: " << p_r_gauss[r[1]/5] << " * " << p_r_gauss[r[0]/5] << " * " << p_nc[1] << endl;
   for (int i = 1; i < t; i++)
   {
-    cout << " * (" << pow(1 - exp(-3), 2) << " * " << p_r_unif[r[i+1]/5] << " * " << p_nc[i+1] << ")^" << (1 << i) << endl;
+    // cout << " * (" << pow(1 - exp(-3), 2) << " * " << p_r_unif[r[i+1]/5] << " * " << p_nc[i+1] << ")^" << (1 << i) << endl;
     p_suc_theory *= pow((1 - exp(-3)) * p_r_unif[r[i+1]/5] * p_nc[i+1], (1 << i));
   }
 
@@ -245,77 +248,12 @@ int main(int argc, char* argv[])
       << " and [Ms]_{B, " << r[i-1] << "} in [" << -ell[i-1] << ", " << ell[i-1] 
       << "]^" << r[i-1] << "} (NCF with block-length " << b[i] << ")" << endl;  
     }
-    // std::cout << "  - One LSH succeeds with " << p_lsh[i] << " probability -> " << R_ncf[i] << " torus-LSH iterations" << endl;
-    // std::cout << "  - (False) near-collision prob p_bad = " << p_col[i] << endl;
   }
   cout << endl;
 
   string prefix = to_string(d) + "_" + to_string(h) + "_" + to_string(w[1]) + "_" + to_string(w[2]);
   
   auto start = chrono::steady_clock::now();
-
-  /////////////////////////////////////////////////////////////////////////////////////////
-
-  // for (size_t iter = 0; iter < repeat; iter++) 
-  // {
-  //   std::cout << "... Runnning " << iter + 1 << "-th, until now " 
-  //     << success_count << " successes" << '\r' << std::flush;
-    
-  //   matrix M; matrix B; secret s; vector<double> e;
-  //   gen_noisy_instance(
-  //     m, d, h, stddev, q, 
-  //     M, B, s, e);
-  //   auto Mtrans = transpose(M);
-    
-  //   generate_random_vectors(d, w[t], top_level_size, prefix + "_" + to_string(t) + "_secrets.txt");
-  
-  //   for (int i = t; i >= 1; i--) 
-  //   {
-  //     list L;      
-  //     ifstream inFile(prefix + "_" + to_string(i) + "_secrets.txt");
-  //     ofstream outFile(prefix + "_" + to_string(i) + "_list.txt");      
-  //     string line;      
-  //     uint64_t sssssize = 0;
-  //     while (getline(inFile, line)) {
-  //       if (line.empty()) continue;  // 빈 줄은 건너뜁니다.        
-  //       istringstream iss(line);
-  //       secret s_cand;
-  //       int64_t num;        
-  //       while (iss >> num) {
-  //         s_cand.push_back(num);
-  //       }        
-  //       auto Ms = babaiNP(matmul(Mtrans, s_cand), B, r[i-1]);        
-  //       for (auto val : s_cand) {outFile << val << " ";}
-  //       outFile << ": ";
-  //       for (auto val : Ms) {outFile << val << " ";}
-  //       outFile << "\n";
-  //       sssssize++;
-  //     }
-  //     inFile.close();
-  //     outFile.close();
-
-  //     list_sizes[i] += sssssize;
-      
-  //     domain dom(r[i-1]);
-  //     for (int k = 0; k < r[i-1] - r[i]; k++) 
-  //       {dom[k] = q[m - r[i-1] + k];}
-  //     for (int k = r[i-1] - r[i]; k < r[i-1]; k++) 
-  //       {dom[k] = ell[i];}
-          
-  //     size_t collision_nums = 0;
-  //     NCF_lsh_serialize(prefix, i, dom, ell[i-1], w[i-1], b[i], R_ncf[i], collision_nums);
-  //     collision_numbers[i] += collision_nums;
-  //   }
-
-  //   ifstream inFile(prefix + "_0_secrets.txt");
-  //   if (inFile.peek() != ifstream::traits_type::eof()) {
-  //     success_count++;
-  //   } else {
-  //     unwanted_count++;
-  //   }
-
-  //   inFile.close();
-  // }
 
   ///////////////////////////////////////////////////////////////////////////////////////// Original (RAM)
 
@@ -343,7 +281,7 @@ int main(int argc, char* argv[])
         auto index = randindex(gen);
         secret tmp(basic_secret_vec[index]);
         tmp.resize(d);
-        random_shuffle(tmp.begin(), tmp.end());
+        shuffle(tmp.begin(), tmp.end(), gen);
         candidate_S.insert(tmp);
       }
   
@@ -366,7 +304,7 @@ int main(int argc, char* argv[])
         {dom[k] = ell[i];}
           
       size_t collision_nums = 0;
-      candidate_S = NCF_lsh(dom, L, ell[i-1], w[i-1], b[i], R_ncf[i], collision_nums);
+      candidate_S = NCF_lsh(dom, L, ell[i-1], w[i-1], b[i], R_lsh[i], collision_nums);
       collision_numbers[i] += collision_nums;
     }
 

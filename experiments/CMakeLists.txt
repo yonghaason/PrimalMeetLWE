@@ -10,11 +10,5 @@ include_directories(src)
 add_executable(expectation_exchange exec/expectation_exchange.cpp)
 target_sources(expectation_exchange PRIVATE ${SRCS})
 
-add_executable(ncf_uniform_test exec/ncf_uniform_test.cpp)
-target_sources(ncf_uniform_test PRIVATE ${SRCS})
-
-add_executable(split_uniform_test exec/split_uniform_test.cpp)
-target_sources(split_uniform_test PRIVATE ${SRCS})
-
 add_executable(meet_lwe_matrix exec/meet_lwe_matrix.cpp)
 target_sources(meet_lwe_matrix PRIVATE ${SRCS})

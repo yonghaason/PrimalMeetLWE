@@ -100,7 +100,7 @@ def cost_m(m, d, n, q, stddev, w, t, param_specified, probs_hw = []):
 
 def cost_beta(beta, d, n, q, m, stddev, w, t, param_specified, probs_hw = []):
 
-    log_lat = log_BKZ_cost(d, beta)
+    log_lat = log_BKZ_cost(m, beta)
     GSnorm = GSA(q, m, n + 1 - d, beta)
 
     lat = {'cost': round(log_lat, 2)}
